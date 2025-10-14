@@ -51,3 +51,4 @@ class LambookPage {
     this.backgroundImagePath,
   });
 }
+
