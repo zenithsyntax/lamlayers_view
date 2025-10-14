@@ -37,6 +37,8 @@ class LambookReaderScreen extends StatefulWidget {
 class _LambookReaderScreenState extends State<LambookReaderScreen> {
   late final List<PageData> _pages;
   String? _error;
+  bool _loading = true;
+  int _progress = 0; // 0..100
 
   // Metadata from lambook
   Color _scaffoldBgColor = const Color(0xFFF1F5F9);
@@ -64,9 +66,17 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
     _parseLambook();
   }
 
+  void _setProgress(int p) {
+    final clamped = p.clamp(0, 100);
+    if (!mounted) return;
+    setState(() => _progress = clamped);
+  }
+
   Future<void> _parseLambook() async {
     try {
+      _setProgress(1);
       final archive = ZipDecoder().decodeBytes(widget.bytes, verify: false);
+      _setProgress(10);
 
       // Parse scrapbook.json
       final metaFile = archive.files.firstWhere(
@@ -74,6 +84,7 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
         orElse: () => throw Exception('scrapbook.json not found'),
       );
       final metaJson = json.decode(utf8.decode(metaFile.content as List<int>));
+      _setProgress(20);
 
       // Extract metadata
       if (metaJson['pageWidth'] != null) {
@@ -82,6 +93,7 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
       if (metaJson['pageHeight'] != null) {
         _pageHeight = (metaJson['pageHeight'] as num).toDouble();
       }
+      _setProgress(25);
 
       // Extract scaffold background
       if (metaJson['scaffoldBackground'] != null) {
@@ -96,6 +108,7 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
           _scaffoldBgImageBytes = base64Decode(base64Data);
         }
       }
+      _setProgress(35);
 
       // Extract left cover
       if (metaJson['leftCover'] != null) {
@@ -109,6 +122,7 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
           _leftCoverImageBytes = base64Decode(base64Data);
         }
       }
+      _setProgress(45);
 
       // Extract right cover
       if (metaJson['rightCover'] != null) {
@@ -122,6 +136,7 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
           _rightCoverImageBytes = base64Decode(base64Data);
         }
       }
+      _setProgress(50);
 
       // Parse page files
       final pageFiles =
@@ -185,6 +200,9 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
           print(
             'Parsed page: $pageName, hasThumb: ${thumbnailBytes != null}, hasBg: ${backgroundImageBytes != null}',
           );
+          // Allocate 45% for pages (50 -> 95)
+          final pageProgress = 50 + (((i + 1) * 45) / pageFiles.length).round();
+          _setProgress(pageProgress);
         } catch (e) {
           print('Error parsing page ${pageFile.name}: $e');
           _pages.add(PageData(name: 'Error Page'));
@@ -192,9 +210,12 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
       }
 
       print('Successfully parsed ${_pages.length} pages');
+      if (mounted) setState(() => _loading = false);
+      _setProgress(100);
     } catch (e) {
       _error = 'Failed to parse .lambook: $e';
       _pages = <PageData>[];
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -221,6 +242,43 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        backgroundColor: _scaffoldBgColor,
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.menu_book_rounded,
+                    size: 56,
+                    color: Colors.indigo,
+                  ),
+                  const SizedBox(height: 16),
+                  LinearProgressIndicator(
+                    value: _progress / 100,
+                    minHeight: 8,
+                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Loading scrapbook… $_progress%',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF334155),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     if (_error != null) {
       return Scaffold(
         backgroundColor: _scaffoldBgColor,
