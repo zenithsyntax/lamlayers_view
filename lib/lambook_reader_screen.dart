@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:convert';
 import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'scrap_book_page_turn/interactive_book.dart';
 
 // Data structure for page content - using file paths like the working version
@@ -64,6 +65,104 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
     super.initState();
     _pageController = PageTurnController();
     _parseLambook();
+  }
+
+  // Check if screen size is supported (phone view only)
+  bool _isPhoneView(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // Consider phone view if width is less than 600px (typical tablet breakpoint)
+    // or if height is significantly larger than width (portrait phone)
+    return screenWidth < 600 || (screenHeight > screenWidth * 1.2);
+  }
+
+  // Warning widget for unsupported screen sizes
+  Widget _buildUnsupportedScreenWarning() {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: Center(
+        child: Container(
+          margin: EdgeInsets.symmetric(horizontal: 24.w),
+          padding: EdgeInsets.all(32.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(24.w),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7).withValues(alpha: 0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.phone_android,
+                  size: 64.sp,
+                  color: const Color(0xFFF59E0B),
+                ),
+              ),
+              SizedBox(height: 24.h),
+              Text(
+                'Screen Size Not Supported',
+                style: TextStyle(
+                  fontSize: 24.sp,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0F172A),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                'This app is optimized for phone screens only.\nPlease use a mobile device or rotate your device to portrait mode.',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  color: const Color(0xFF64748B),
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 32.h),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 20.sp,
+                      color: const Color(0xFFF59E0B),
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Recommended: Phone in portrait mode',
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFF59E0B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _setProgress(int p) {
@@ -242,6 +341,11 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if screen size is supported (phone view only)
+    if (!_isPhoneView(context)) {
+      return _buildUnsupportedScreenWarning();
+    }
+
     if (_loading) {
       return Scaffold(
         backgroundColor: _scaffoldBgColor,
@@ -312,7 +416,7 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEC4899).withOpacity(0.1),
+                  color: const Color(0xFFEC4899).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -372,12 +476,14 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
                               child: Container(
                                 width:
                                     MediaQuery.of(context).size.height * 0.82,
-                                height: MediaQuery.of(context).size.width * 0.7,
+                                height: MediaQuery.of(context).size.width * 0.61,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.2,
+                                      ),
                                       blurRadius: 10,
                                       offset: const Offset(4, 4),
                                     ),
@@ -405,7 +511,7 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
                                     0.815 /
                                     2,
                                 height:
-                                    MediaQuery.of(context).size.width * 0.71,
+                                    MediaQuery.of(context).size.width * 0.62,
                                 decoration: BoxDecoration(
                                   borderRadius: const BorderRadius.only(
                                     bottomLeft: Radius.circular(16),
@@ -444,10 +550,11 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
                             aspectRatio: (_pageWidth * 2) / _pageHeight,
                             pageViewMode: PageViewMode.double,
                             onPageChanged: _onPageChanged,
-                            settings: FlipSettings(
-                              startPageIndex: 0,
-                              usePortrait: false,
-                            ),
+                          settings: FlipSettings(
+                                startPageIndex: 0,
+                                usePortrait: false,
+                                flippingTime: 1200,swipeDistance: 1200
+                              ),
                             builder: (context, pageIndex, constraints) {
                               if (pageIndex >= _pages.length) {
                                 return Container(
@@ -537,8 +644,8 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
 
                     // Navigation arrows
                     Positioned(
-                      bottom: 20,
-                      left: 20,
+                      bottom: 20.h,
+                      left: 20.w,
                       child: IconButton(
                         onPressed: _currentLeftPage > 0
                             ? _goToPreviousPage
@@ -548,24 +655,21 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
                           color: _currentLeftPage > 0
                               ? const Color(0xFF0F172A)
                               : const Color(0xFF94A3B8),
-                          size: 24,
+                          size: 24.sp,
                         ),
                         padding: const EdgeInsets.all(12),
-                        constraints: const BoxConstraints(
-                          minWidth: 50,
-                          minHeight: 50,
+                        constraints:  BoxConstraints(
+                          minWidth: 50.w,
+                          minHeight: 50.h,
                         ),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          shape: const CircleBorder(),
-                          elevation: 2,
-                        ),
+                       
+                        
                       ),
                     ),
 
                     Positioned(
-                      bottom: 20,
-                      right: 20,
+                      bottom: 20.h,
+                      right: 20.w,
                       child: IconButton(
                         onPressed: _currentRightPage < _pages.length - 1
                             ? _goToNextPage
@@ -575,20 +679,15 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
                           color: _currentRightPage < _pages.length - 1
                               ? const Color(0xFF0F172A)
                               : const Color(0xFF94A3B8),
-                          size: 24,
+                          size: 24.sp,
                         ),
                         padding: const EdgeInsets.all(12),
-                        constraints: const BoxConstraints(
-                          minWidth: 50,
-                          minHeight: 50,
+                        constraints:  BoxConstraints(
+                          minWidth: 50.w,
+                          minHeight: 50.h,
                         ),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          shape: const CircleBorder(),
-                          elevation: 2,
-                        ),
-                      ),
-                    ),
+                        
+                    )),
                   ],
                 ),
               ),
