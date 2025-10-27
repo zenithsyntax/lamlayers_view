@@ -6,7 +6,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:go_router/go_router.dart';
 import 'lambook_reader_screen.dart';
+import 'privacy_policy_screen.dart';
+import 'terms_of_service_screen.dart';
+import 'home_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -25,6 +29,27 @@ class _GoogleAuthClient extends http.BaseClient {
   }
 }
 
+// Router configuration
+final GoRouter _router = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(path: '/', builder: (context, state) => const ViewerHomePage()),
+    GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
+    GoRoute(
+      path: '/viewer',
+      builder: (context, state) => const ViewerHomePage(),
+    ),
+    GoRoute(
+      path: '/terms',
+      builder: (context, state) => const TermsOfServiceScreen(),
+    ),
+    GoRoute(
+      path: '/privacy',
+      builder: (context, state) => const PrivacyPolicyScreen(),
+    ),
+  ],
+);
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -36,12 +61,12 @@ class MyApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
-        return MaterialApp(
-          title: 'LAMLayers Viewer',
+        return MaterialApp.router(
+          title: 'Lambook View - Digital Scrapbook Viewer',
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
           ),
-          home: const ViewerHomePage(),
+          routerConfig: _router,
         );
       },
     );
@@ -302,122 +327,159 @@ class _ViewerHomePageState extends State<ViewerHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Builder(
-              builder: (_) {
-                if (loading) {
-                  return const CircularProgressIndicator();
-                }
-                if (error != null) {
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 48,
-                        color: Colors.red,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        error!,
-                        style: const TextStyle(color: Colors.red, fontSize: 16),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      if (fileUrl != null && _isGoogleDriveUrl(fileUrl!))
-                        Column(
+      body: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Builder(
+                    builder: (_) {
+                      if (loading) {
+                        return const CircularProgressIndicator();
+                      }
+                      if (error != null) {
+                        return Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                ElevatedButton.icon(
-                                  icon: const Icon(Icons.refresh),
-                                  label: const Text('Try Again'),
-                                  onPressed: _signInAndLoadDrive,
-                                ),
-                                const SizedBox(width: 8),
-                                ElevatedButton.icon(
-                                  icon: const Icon(Icons.login),
-                                  label: const Text('Fresh Sign-In'),
-                                  onPressed: _retryWithFreshAuth,
-                                ),
-                              ],
+                            const Icon(
+                              Icons.error_outline,
+                              size: 48,
+                              color: Colors.red,
                             ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Having trouble with Google Drive?',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
+                            const SizedBox(height: 16),
+                            Text(
+                              error!,
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 16,
                               ),
+                              textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: 8),
-                            OutlinedButton.icon(
-                              icon: const Icon(Icons.upload_file),
-                              label: const Text('Upload File Instead'),
-                              onPressed: _uploadFileDirectly,
-                            ),
-                          ],
-                        ),
-                    ],
-                  );
-                }
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.menu_book_rounded,
-                      size: 64,
-                      color: Colors.indigo,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Loaded scrapbook from:',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    SelectableText(
-                      fileUrl ?? '',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    if (fileUrl != null &&
-                        _isGoogleDriveUrl(fileUrl!) &&
-                        fileBytes == null)
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.login),
-                        label: const Text('Sign in with Google to load'),
-                        onPressed: _signInAndLoadDrive,
-                      ),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.open_in_new),
-                      label: const Text('Open in Lambook Reader'),
-                      onPressed: (fileUrl != null && fileBytes != null)
-                          ? () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => LambookReaderScreen(
-                                    fileUrl: fileUrl!,
-                                    bytes: fileBytes!,
+                            const SizedBox(height: 16),
+                            if (fileUrl != null && _isGoogleDriveUrl(fileUrl!))
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ElevatedButton.icon(
+                                        icon: const Icon(Icons.refresh),
+                                        label: const Text('Try Again'),
+                                        onPressed: _signInAndLoadDrive,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      ElevatedButton.icon(
+                                        icon: const Icon(Icons.login),
+                                        label: const Text('Fresh Sign-In'),
+                                        onPressed: _retryWithFreshAuth,
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              );
-                            }
-                          : null,
-                    ),
-                  ],
-                );
-              },
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'Having trouble with Google Drive?',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  OutlinedButton.icon(
+                                    icon: const Icon(Icons.upload_file),
+                                    label: const Text('Upload File Instead'),
+                                    onPressed: _uploadFileDirectly,
+                                  ),
+                                ],
+                              ),
+                          ],
+                        );
+                      }
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.menu_book_rounded,
+                            size: 64,
+                            color: Colors.indigo,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Loaded scrapbook from:',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          SelectableText(
+                            fileUrl ?? '',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          if (fileUrl != null &&
+                              _isGoogleDriveUrl(fileUrl!) &&
+                              fileBytes == null)
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.login),
+                              label: const Text('Sign in with Google to load'),
+                              onPressed: _signInAndLoadDrive,
+                            ),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.open_in_new),
+                            label: const Text('Open in Lambook Reader'),
+                            onPressed: (fileUrl != null && fileBytes != null)
+                                ? () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => LambookReaderScreen(
+                                          fileUrl: fileUrl!,
+                                          bytes: fileBytes!,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                : null,
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
+          // Footer with Privacy and Terms links
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              border: Border(top: BorderSide(color: Colors.grey[300]!)),
+            ),
+            child: SafeArea(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      context.go('/privacy');
+                    },
+                    child: const Text('Privacy Policy'),
+                  ),
+                  const Text('•'),
+                  TextButton(
+                    onPressed: () {
+                      context.go('/terms');
+                    },
+                    child: const Text('Terms of Service'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
