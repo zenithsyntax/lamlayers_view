@@ -25,6 +25,8 @@ class HomeScreen extends StatelessWidget {
                       SizedBox(height: _getResponsiveSpacing(context) * 2),
                       _buildHowItWorksSection(context),
                       SizedBox(height: _getResponsiveSpacing(context) * 2),
+                      _buildGoogleAuthInfoSection(context),
+                      SizedBox(height: _getResponsiveSpacing(context) * 2),
                       _buildCTASection(context),
                       SizedBox(height: _getResponsiveSpacing(context) * 2),
                       _buildFooter(context),
@@ -284,7 +286,7 @@ class HomeScreen extends StatelessWidget {
           ),
           SizedBox(height: 16),
           Text(
-            'Experience your scrapbooks in a beautiful,\ninteractive digital format',
+            'View your LamLayers scrapbooks with stunning page-turn animations',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: _getResponsiveFontSize(
@@ -342,9 +344,9 @@ class HomeScreen extends StatelessWidget {
       },
       {
         'icon': Icons.cloud_sync_rounded,
-        'title': 'Google Drive Sync',
+        'title': 'Google Drive Integration',
         'description':
-            'Seamlessly access and view scrapbooks from Google Drive',
+            'Seamlessly fetch and view .lambook files directly from Google Drive',
         'gradient': [const Color(0xFFEC4899), const Color(0xFFF43F5E)],
       },
       {
@@ -355,23 +357,22 @@ class HomeScreen extends StatelessWidget {
       },
       {
         'icon': Icons.touch_app_rounded,
-        'title': 'Interactive UI',
-        'description':
-            'Swipe, tap, and interact with pages for an immersive experience',
+        'title': 'Interactive Reading',
+        'description': 'Swipe, tap, and navigate pages with smooth animations',
         'gradient': [const Color(0xFFF59E0B), const Color(0xFFF97316)],
       },
       {
         'icon': Icons.hd_rounded,
-        'title': 'High Quality',
+        'title': 'High Quality Display',
         'description':
-            'Crystal-clear image quality for the best viewing experience',
+            'Crystal-clear rendering of your scrapbook pages and images',
         'gradient': [const Color(0xFF10B981), const Color(0xFF14B8A6)],
       },
       {
-        'icon': Icons.bolt_rounded,
-        'title': 'Lightning Fast',
+        'icon': Icons.security_rounded,
+        'title': 'Secure Access',
         'description':
-            'Optimized performance for instant access to your content',
+            'Your Google credentials are never stored - uses secure OAuth2',
         'gradient': [const Color(0xFFEF4444), const Color(0xFFDC2626)],
       },
     ];
@@ -555,7 +556,7 @@ class HomeScreen extends StatelessWidget {
           ),
           SizedBox(height: 12),
           Text(
-            'Get started in three simple steps',
+            'View your lambooks in three simple steps',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: _getResponsiveFontSize(
@@ -571,24 +572,24 @@ class HomeScreen extends StatelessWidget {
           _buildStep(
             context,
             '1',
-            'Upload Your Scrapbook',
-            'Upload your scrapbook file to Google Drive or prepare a direct URL',
+            'Get Your File Link',
+            'Upload your .lambook file to Google Drive and get the shareable link',
             const Color(0xFF8B5CF6),
           ),
           SizedBox(height: _getResponsiveSpacing(context) * 1.5),
           _buildStep(
             context,
             '2',
-            'Sign In with Google',
-            'Authenticate with Google to access files from your Google Drive',
+            'Add File ID to URL',
+            'Extract the file ID from your Drive link and add it as a query parameter',
             const Color(0xFFEC4899),
           ),
           SizedBox(height: _getResponsiveSpacing(context) * 1.5),
           _buildStep(
             context,
             '3',
-            'Start Reading',
-            'Open your scrapbook and enjoy the interactive reading experience',
+            'Sign In & Read',
+            'Authenticate with Google to access the file and enjoy your lambook',
             const Color(0xFFF59E0B),
           ),
         ],
@@ -693,6 +694,235 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildGoogleAuthInfoSection(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(_getResponsivePadding(context) * 2),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF4285F4).withOpacity(0.1),
+            const Color(0xFFDB4437).withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(
+          color: const Color(0xFF4285F4).withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF4285F4).withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.shield_outlined,
+              size: _getResponsiveFontSize(
+                context,
+                mobile: 48,
+                tablet: 56,
+                desktop: 64,
+              ),
+              color: const Color(0xFF4285F4),
+            ),
+          ),
+          SizedBox(height: _getResponsiveSpacing(context)),
+          Text(
+            'About Google Sign-In',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: _getResponsiveFontSize(
+                context,
+                mobile: 28,
+                tablet: 36,
+                desktop: 42,
+              ),
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF0F172A),
+              letterSpacing: -0.5,
+            ),
+          ),
+          SizedBox(height: 16),
+          Container(
+            padding: EdgeInsets.all(_getResponsivePadding(context) * 1.5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF3C7),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFF59E0B).withOpacity(0.3),
+                width: 2,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: const Color(0xFFF59E0B),
+                  size: 28,
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'You may see an "unverified app" warning during Google sign-in. This is normal and safe.',
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(
+                        context,
+                        mobile: 14,
+                        tablet: 15,
+                        desktop: 16,
+                      ),
+                      color: const Color(0xFF92400E),
+                      fontWeight: FontWeight.w600,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: _getResponsiveSpacing(context) * 1.5),
+          _buildAuthInfoCard(
+            context,
+            'Why the Warning Appears',
+            'This viewer app is currently in development and pending Google verification. The warning is a standard security measure for apps not yet verified by Google.',
+            Icons.warning_amber_rounded,
+            const Color(0xFFF59E0B),
+          ),
+          SizedBox(height: _getResponsiveSpacing(context)),
+          _buildAuthInfoCard(
+            context,
+            'Is It Safe to Continue?',
+            'Yes! This app only requests read-only access to view your .lambook files from Google Drive. We never store your credentials or access any other data.',
+            Icons.verified_user_rounded,
+            const Color(0xFF10B981),
+          ),
+          SizedBox(height: _getResponsiveSpacing(context)),
+          _buildAuthInfoCard(
+            context,
+            'What Permissions Are Requested',
+            'The app only asks for:\n• View files you open with this app (drive.file scope)\n• Your email address for authentication\n\nNo write access, no access to other files.',
+            Icons.security_rounded,
+            const Color(0xFF4285F4),
+          ),
+          SizedBox(height: _getResponsiveSpacing(context)),
+          _buildAuthInfoCard(
+            context,
+            'How to Proceed',
+            'When you see the warning screen, click "Advanced" → "Go to Lambook Viewer (unsafe)" to continue. Your data remains completely safe.',
+            Icons.touch_app_rounded,
+            const Color(0xFFEC4899),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAuthInfoCard(
+    BuildContext context,
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(_getResponsivePadding(context) * 1.5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.all(_getResponsivePadding(context) * 0.8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [color, color.withOpacity(0.7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: _getResponsiveFontSize(
+                context,
+                mobile: 28,
+                tablet: 32,
+                desktop: 36,
+              ),
+            ),
+          ),
+          SizedBox(width: _getResponsiveSpacing(context)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: _getResponsiveFontSize(
+                      context,
+                      mobile: 18,
+                      tablet: 20,
+                      desktop: 22,
+                    ),
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: _getResponsiveFontSize(
+                      context,
+                      mobile: 14,
+                      tablet: 15,
+                      desktop: 16,
+                    ),
+                    color: const Color(0xFF475569),
+                    height: 1.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCTASection(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -758,7 +988,7 @@ class HomeScreen extends StatelessWidget {
           ),
           SizedBox(height: 12),
           Text(
-            'Transform your scrapbooks into stunning digital experiences',
+            'View your digital scrapbooks with stunning animations',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: _getResponsiveFontSize(
@@ -841,9 +1071,62 @@ class HomeScreen extends StatelessWidget {
             ),
           ],
         ),
+        SizedBox(height: _getResponsiveSpacing(context)),
+        // Privacy and Terms Links
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton.icon(
+              onPressed: () => context.go('/privacy'),
+              icon: const Icon(Icons.privacy_tip_outlined, size: 18),
+              label: const Text('Privacy Policy'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF8B5CF6),
+                textStyle: TextStyle(
+                  fontSize: _getResponsiveFontSize(
+                    context,
+                    mobile: 14,
+                    tablet: 15,
+                    desktop: 16,
+                  ),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Text(
+              ' • ',
+              style: TextStyle(
+                fontSize: _getResponsiveFontSize(
+                  context,
+                  mobile: 14,
+                  tablet: 15,
+                  desktop: 16,
+                ),
+                color: const Color(0xFF94A3B8),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => context.go('/terms'),
+              icon: const Icon(Icons.verified_user_outlined, size: 18),
+              label: const Text('Terms of Service'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF8B5CF6),
+                textStyle: TextStyle(
+                  fontSize: _getResponsiveFontSize(
+                    context,
+                    mobile: 14,
+                    tablet: 15,
+                    desktop: 16,
+                  ),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
         SizedBox(height: 8),
         Text(
-          '© ${DateTime.now().year} All rights reserved',
+          '© ${DateTime.now().year} LamLayers. All rights reserved',
           style: TextStyle(
             fontSize: _getResponsiveFontSize(
               context,
@@ -852,6 +1135,19 @@ class HomeScreen extends StatelessWidget {
               desktop: 16,
             ),
             color: const Color(0xFF475569),
+          ),
+        ),
+        SizedBox(height: 4),
+        Text(
+          'Part of the LamLayers ecosystem',
+          style: TextStyle(
+            fontSize: _getResponsiveFontSize(
+              context,
+              mobile: 12,
+              tablet: 13,
+              desktop: 14,
+            ),
+            color: const Color(0xFF94A3B8),
           ),
         ),
       ],
@@ -868,6 +1164,9 @@ class HomeScreen extends StatelessWidget {
           width: _isMobile(context)
               ? MediaQuery.of(context).size.width * 0.9
               : 600,
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+          ),
           padding: EdgeInsets.all(_getResponsivePadding(context) * 1.5),
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -898,7 +1197,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 16),
                 Text(
-                  'How to Use Lambook View',
+                  'How to Use Lambook Viewer',
                   style: TextStyle(
                     fontSize: _getResponsiveFontSize(
                       context,
@@ -913,20 +1212,64 @@ class HomeScreen extends StatelessWidget {
                 SizedBox(height: 24),
                 _buildDialogSection(
                   context,
-                  'Add your file URL as a query parameter:',
-                  'https://lambook-view.web.app/?file=YOUR_FILE_URL',
+                  'Step 1: Upload to Google Drive',
+                  '1. Open the LamLayers mobile app\n2. Create or open your lambook\n3. Tap "Share via Google Drive"\n4. Sign in with your Google account\n5. The .lambook file will be uploaded',
                 ),
                 SizedBox(height: 20),
                 _buildDialogSection(
                   context,
-                  'Supported Sources:',
-                  '• Google Drive links\n• Direct file URLs (HTTPS)',
+                  'Step 2: Get the File ID',
+                  'After uploading, you\'ll get a link like:\nhttps://drive.google.com/file/d/1ABC...XYZ/view\n\nThe file ID is the part between /d/ and /view:\n1ABC...XYZ',
                 ),
                 SizedBox(height: 20),
                 _buildDialogSection(
                   context,
-                  'Example:',
-                  'https://lambook-view.web.app/?file=https://drive.google.com/file/d/YOUR_FILE_ID/view',
+                  'Step 3: Create Viewer URL',
+                  'Add the file ID to this viewer URL:\n\nhttps://lambook-view.web.app/?fileId=YOUR_FILE_ID',
+                ),
+                SizedBox(height: 20),
+                _buildDialogSection(
+                  context,
+                  'Step 4: View Your Lambook',
+                  '1. Open the URL in your browser\n2. Sign in with Google (you may see an "unverified app" warning - click Advanced → Continue)\n3. Enjoy your interactive lambook!',
+                ),
+                SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF10B981).withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.tips_and_updates_rounded,
+                        color: const Color(0xFF059669),
+                        size: 24,
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Tip: Save the viewer URL with your file ID to easily access your lambook anytime!',
+                          style: TextStyle(
+                            fontSize: _getResponsiveFontSize(
+                              context,
+                              mobile: 13,
+                              tablet: 14,
+                              desktop: 15,
+                            ),
+                            color: const Color(0xFF065F46),
+                            fontWeight: FontWeight.w600,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 SizedBox(height: 24),
                 ElevatedButton(
@@ -944,7 +1287,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   child: const Text(
                     'Got it!',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
                   ),
                 ),
               ],
@@ -968,9 +1311,9 @@ class HomeScreen extends StatelessWidget {
           style: TextStyle(
             fontSize: _getResponsiveFontSize(
               context,
-              mobile: 14,
-              tablet: 15,
-              desktop: 16,
+              mobile: 16,
+              tablet: 17,
+              desktop: 18,
             ),
             fontWeight: FontWeight.w700,
             color: const Color(0xFF0F172A),
@@ -988,15 +1331,14 @@ class HomeScreen extends StatelessWidget {
           child: SelectableText(
             content,
             style: TextStyle(
-              fontFamily: 'monospace',
               fontSize: _getResponsiveFontSize(
                 context,
-                mobile: 11,
-                tablet: 12,
-                desktop: 13,
+                mobile: 13,
+                tablet: 14,
+                desktop: 15,
               ),
               color: const Color(0xFF475569),
-              height: 1.5,
+              height: 1.6,
             ),
           ),
         ),

@@ -33,7 +33,7 @@ class _GoogleAuthClient extends http.BaseClient {
 final GoRouter _router = GoRouter(
   initialLocation: '/',
   routes: [
-    GoRoute(path: '/', builder: (context, state) => const ViewerHomePage()),
+    GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
     GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
     GoRoute(
       path: '/viewer',
