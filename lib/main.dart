@@ -36,8 +36,11 @@ final GoRouter _router = GoRouter(
     GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
     GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
     GoRoute(
-      path: '/viewer',
-      builder: (context, state) => const ViewerHomePage(),
+      path: '/lambook-view',
+      builder: (context, state) {
+        final fileUrl = state.uri.queryParameters['file'];
+        return ViewerHomePage(fileUrl: fileUrl);
+      },
     ),
     GoRoute(
       path: '/terms',
@@ -74,7 +77,9 @@ class MyApp extends StatelessWidget {
 }
 
 class ViewerHomePage extends StatefulWidget {
-  const ViewerHomePage({super.key});
+  final String? fileUrl;
+
+  const ViewerHomePage({super.key, this.fileUrl});
 
   @override
   State<ViewerHomePage> createState() => _ViewerHomePageState();
@@ -99,8 +104,7 @@ class _ViewerHomePageState extends State<ViewerHomePage> {
 
   Future<void> _loadFromQuery() async {
     try {
-      final uri = Uri.base;
-      final param = uri.queryParameters['file'];
+      final param = widget.fileUrl;
       if (param == null || param.isEmpty) {
         setState(() {
           loading = false;

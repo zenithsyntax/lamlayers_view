@@ -9,7 +9,7 @@ This document summarizes all changes made to comply with Google OAuth verificati
 **File:** `lib/main.dart`
 - Changed the root route `/` from `ViewerHomePage` to `HomeScreen`
 - Now both `https://lambook-view.web.app/` and `https://lambook-view.web.app/#/home` display the proper homepage
-- `ViewerHomePage` moved to `/viewer` route for file viewing functionality
+- `ViewerHomePage` moved to `/lambook-view` route for file viewing functionality
 
 ### 2. Privacy Policy & Terms Links Added ✅
 **File:** `lib/home_screen.dart`
@@ -59,7 +59,7 @@ This document summarizes all changes made to comply with Google OAuth verificati
 - Homepage: `https://lambook-view.web.app/` or `https://lambook-view.web.app/#/home`
 - Privacy Policy: `https://lambook-view.web.app/#/privacy`
 - Terms of Service: `https://lambook-view.web.app/#/terms`
-- File Viewer: `https://lambook-view.web.app/#/viewer?file=YOUR_FILE_URL`
+- File Viewer: `https://lambook-view.web.app/#/lambook-view/?file=YOUR_FILE_URL`
 
 ## Deployment Instructions
 

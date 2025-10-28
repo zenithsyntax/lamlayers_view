@@ -1218,14 +1218,14 @@ class HomeScreen extends StatelessWidget {
                 SizedBox(height: 20),
                 _buildDialogSection(
                   context,
-                  'Step 2: Get the File ID',
-                  'After uploading, you\'ll get a link like:\nhttps://drive.google.com/file/d/1ABC...XYZ/view\n\nThe file ID is the part between /d/ and /view:\n1ABC...XYZ',
+                  'Step 2: Get the File URL',
+                  'After uploading, you\'ll get a link like:\nhttps://drive.google.com/file/d/1ABC...XYZ/view\n\nConvert it to a direct download URL:\nhttps://drive.google.com/uc?id=1ABC...XYZ&export=download',
                 ),
                 SizedBox(height: 20),
                 _buildDialogSection(
                   context,
                   'Step 3: Create Viewer URL',
-                  'Add the file ID to this viewer URL:\n\nhttps://lamlayers-view.web.app/?fileId=YOUR_FILE_ID',
+                  'Add the file URL to this viewer URL:\n\nhttps://lambook-view.web.app/#/lambook-view/?file=YOUR_FILE_URL',
                 ),
                 SizedBox(height: 20),
                 _buildDialogSection(
