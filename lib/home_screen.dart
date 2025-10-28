@@ -125,7 +125,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                     SizedBox(width: 12),
                     Text(
-                      'Lambook View',
+                      'Lamlayers',
                       style: TextStyle(
                         fontSize: _getResponsiveFontSize(
                           context,
@@ -269,7 +269,7 @@ class HomeScreen extends StatelessWidget {
           ),
           SizedBox(height: _getResponsiveSpacing(context)),
           Text(
-            'Lambook Digital Viewer',
+            'Lamlayers Digital Viewer',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: _getResponsiveFontSize(
@@ -286,7 +286,7 @@ class HomeScreen extends StatelessWidget {
           ),
           SizedBox(height: 16),
           Text(
-            'View your LamLayers scrapbooks with stunning page-turn animations',
+            'View your Lamlayers scrapbooks with stunning page-turn animations',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: _getResponsiveFontSize(
@@ -346,7 +346,7 @@ class HomeScreen extends StatelessWidget {
         'icon': Icons.cloud_sync_rounded,
         'title': 'Google Drive Integration',
         'description':
-            'Seamlessly fetch and view .lambook files directly from Google Drive',
+            'Seamlessly fetch and view .lamlayers files directly from Google Drive',
         'gradient': [const Color(0xFFEC4899), const Color(0xFFF43F5E)],
       },
       {
@@ -556,7 +556,7 @@ class HomeScreen extends StatelessWidget {
           ),
           SizedBox(height: 12),
           Text(
-            'View your lambooks in three simple steps',
+            'View your lamlayers in three simple steps',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: _getResponsiveFontSize(
@@ -573,7 +573,7 @@ class HomeScreen extends StatelessWidget {
             context,
             '1',
             'Get Your File Link',
-            'Upload your .lambook file to Google Drive and get the shareable link',
+            'Upload your .lamlayers file to Google Drive and get the shareable link',
             const Color(0xFF8B5CF6),
           ),
           SizedBox(height: _getResponsiveSpacing(context) * 1.5),
@@ -589,7 +589,7 @@ class HomeScreen extends StatelessWidget {
             context,
             '3',
             'Sign In & Read',
-            'Authenticate with Google to access the file and enjoy your lambook',
+            'Authenticate with Google to access the file and enjoy your lamlayers',
             const Color(0xFFF59E0B),
           ),
         ],
@@ -805,7 +805,7 @@ class HomeScreen extends StatelessWidget {
           _buildAuthInfoCard(
             context,
             'Is It Safe to Continue?',
-            'Yes! This app only requests read-only access to view your .lambook files from Google Drive. We never store your credentials or access any other data.',
+            'Yes! This app only requests read-only access to view your .lamlayers files from Google Drive. We never store your credentials or access any other data.',
             Icons.verified_user_rounded,
             const Color(0xFF10B981),
           ),
@@ -821,7 +821,7 @@ class HomeScreen extends StatelessWidget {
           _buildAuthInfoCard(
             context,
             'How to Proceed',
-            'When you see the warning screen, click "Advanced" → "Go to Lambook Viewer (unsafe)" to continue. Your data remains completely safe.',
+            'When you see the warning screen, click "Advanced" → "Go to Lamlayers Viewer (unsafe)" to continue. Your data remains completely safe.',
             Icons.touch_app_rounded,
             const Color(0xFFEC4899),
           ),
@@ -1057,7 +1057,7 @@ class HomeScreen extends StatelessWidget {
             ),
             SizedBox(width: 12),
             Text(
-              'Lambook Digital Viewer',
+              'Lamlayers Digital Viewer',
               style: TextStyle(
                 fontSize: _getResponsiveFontSize(
                   context,
@@ -1126,7 +1126,7 @@ class HomeScreen extends StatelessWidget {
         ),
         SizedBox(height: 8),
         Text(
-          '© ${DateTime.now().year} LamLayers. All rights reserved',
+          '© ${DateTime.now().year} Lamlayers. All rights reserved',
           style: TextStyle(
             fontSize: _getResponsiveFontSize(
               context,
@@ -1139,7 +1139,7 @@ class HomeScreen extends StatelessWidget {
         ),
         SizedBox(height: 4),
         Text(
-          'Part of the LamLayers ecosystem',
+          'Part of the Lamlayers ecosystem',
           style: TextStyle(
             fontSize: _getResponsiveFontSize(
               context,
@@ -1197,7 +1197,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 16),
                 Text(
-                  'How to Use Lambook Viewer',
+                  'How to Use Lamlayers Viewer',
                   style: TextStyle(
                     fontSize: _getResponsiveFontSize(
                       context,
@@ -1213,7 +1213,7 @@ class HomeScreen extends StatelessWidget {
                 _buildDialogSection(
                   context,
                   'Step 1: Upload to Google Drive',
-                  '1. Open the LamLayers mobile app\n2. Create or open your lambook\n3. Tap "Share via Google Drive"\n4. Sign in with your Google account\n5. The .lambook file will be uploaded',
+                  '1. Open the Lamlayers mobile app\n2. Create or open your lamlayers\n3. Tap "Share via Google Drive"\n4. Sign in with your Google account\n5. The .lamlayers file will be uploaded',
                 ),
                 SizedBox(height: 20),
                 _buildDialogSection(
@@ -1225,13 +1225,13 @@ class HomeScreen extends StatelessWidget {
                 _buildDialogSection(
                   context,
                   'Step 3: Create Viewer URL',
-                  'Add the file ID to this viewer URL:\n\nhttps://lambook-view.web.app/?fileId=YOUR_FILE_ID',
+                  'Add the file ID to this viewer URL:\n\nhttps://lamlayers-view.web.app/?fileId=YOUR_FILE_ID',
                 ),
                 SizedBox(height: 20),
                 _buildDialogSection(
                   context,
-                  'Step 4: View Your Lambook',
-                  '1. Open the URL in your browser\n2. Sign in with Google (you may see an "unverified app" warning - click Advanced → Continue)\n3. Enjoy your interactive lambook!',
+                  'Step 4: View Your Lamlayers',
+                  '1. Open the URL in your browser\n2. Sign in with Google (you may see an "unverified app" warning - click Advanced → Continue)\n3. Enjoy your interactive lamlayers!',
                 ),
                 SizedBox(height: 20),
                 Container(
@@ -1254,7 +1254,7 @@ class HomeScreen extends StatelessWidget {
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Tip: Save the viewer URL with your file ID to easily access your lambook anytime!',
+                          'Tip: Save the viewer URL with your file ID to easily access your lamlayers anytime!',
                           style: TextStyle(
                             fontSize: _getResponsiveFontSize(
                               context,

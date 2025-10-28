@@ -62,7 +62,7 @@ class MyApp extends StatelessWidget {
       splitScreenMode: true,
       builder: (context, child) {
         return MaterialApp.router(
-          title: 'Lambook View - Digital Scrapbook Viewer',
+          title: 'Lamlayers - Digital lambook Viewer',
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
           ),
