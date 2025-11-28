@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'lambook_reader_screen.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_of_service_screen.dart';
+import 'data_deletion_screen.dart';
 import 'home_screen.dart';
 
 void main() {
@@ -49,6 +50,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/privacy',
       builder: (context, state) => const PrivacyPolicyScreen(),
+    ),
+    GoRoute(
+      path: '/data_deletion',
+      builder: (context, state) => const DataDeletionScreen(),
     ),
   ],
 );
@@ -455,34 +460,7 @@ class _ViewerHomePageState extends State<ViewerHomePage> {
               ),
             ),
           ),
-          // Footer with Privacy and Terms links
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              border: Border(top: BorderSide(color: Colors.grey[300]!)),
-            ),
-            child: SafeArea(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      context.go('/privacy');
-                    },
-                    child: const Text('Privacy Policy'),
-                  ),
-                  const Text('•'),
-                  TextButton(
-                    onPressed: () {
-                      context.go('/terms');
-                    },
-                    child: const Text('Terms of Service'),
-                  ),
-                ],
-              ),
-            ),
-          ),
+         
         ],
       ),
     );
