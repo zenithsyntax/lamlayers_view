@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:html' as html;
+
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -1077,22 +1079,11 @@ class HomeScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextButton.icon(
-              onPressed: () => context.go('/privacy'),
-              icon: const Icon(Icons.privacy_tip_outlined, size: 18),
-              label: const Text('Privacy Policy'),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF8B5CF6),
-                textStyle: TextStyle(
-                  fontSize: _getResponsiveFontSize(
-                    context,
-                    mobile: 14,
-                    tablet: 15,
-                    desktop: 16,
-                  ),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+  onPressed: () => html.window.open('https://lamlayers.zenithsyntax.com/#/privacy', '_blank'),
+  icon: const Icon(Icons.privacy_tip_outlined, size: 18),
+  label: const Text('Privacy Policy'),
+),
+
             Text(
               ' • ',
               style: TextStyle(

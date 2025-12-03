@@ -67,14 +67,17 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
     _parseLambook();
   }
 
-  // Check if screen size is supported (phone view only)
+  // Improved phone view detection
   bool _isPhoneView(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
-    // Consider phone view if width is less than 600px (typical tablet breakpoint)
-    // or if height is significantly larger than width (portrait phone)
-    return screenWidth < 600 || (screenHeight > screenWidth * 1.2);
+    final size = MediaQuery.of(context).size;
+    final shortestSide = size.shortestSide;
+    final longestSide = size.longestSide;
+    
+    // Consider it a phone if:
+    // 1. Shortest side is less than 600 (standard tablet breakpoint)
+    // 2. Device has a portrait-like aspect ratio (longest/shortest > 1.4)
+    // This handles most phones in both orientations
+    return shortestSide < 600 || (longestSide / shortestSide) > 1.4;
   }
 
   // Warning widget for unsupported screen sizes
@@ -123,7 +126,7 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
               ),
               SizedBox(height: 16.h),
               Text(
-                'This app is optimized for phone screens only.\nPlease use a mobile device or rotate your device to portrait mode.',
+                'This app is optimized for phone screens only.\nPlease use a mobile device for the best experience.',
                 style: TextStyle(
                   fontSize: 16.sp,
                   color: const Color(0xFF64748B),
@@ -317,8 +320,6 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
       if (mounted) setState(() => _loading = false);
     }
   }
-
-  // Removed: extension detection no longer needed on web
 
   void _onPageChanged(int leftPageIndex, int rightPageIndex) {
     setState(() {
@@ -550,11 +551,12 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
                             aspectRatio: (_pageWidth * 2) / _pageHeight,
                             pageViewMode: PageViewMode.double,
                             onPageChanged: _onPageChanged,
-                          settings: FlipSettings(
-                                startPageIndex: 0,
-                                usePortrait: false,
-                                flippingTime: 1200,swipeDistance: 1200
-                              ),
+                            settings: FlipSettings(
+                              startPageIndex: 0,
+                              usePortrait: false,
+                              flippingTime: 1200,
+                              swipeDistance: 1200,
+                            ),
                             builder: (context, pageIndex, constraints) {
                               if (pageIndex >= _pages.length) {
                                 return Container(
@@ -662,8 +664,6 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
                           minWidth: 50.w,
                           minHeight: 50.h,
                         ),
-                       
-                        
                       ),
                     ),
 
@@ -686,8 +686,8 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
                           minWidth: 50.w,
                           minHeight: 50.h,
                         ),
-                        
-                    )),
+                      ),
+                    ),
                   ],
                 ),
               ),
