@@ -103,6 +103,8 @@ class _ViewerHomePageState extends State<ViewerHomePage>
   String? error;
   bool loading = true;
   String loadingMessage = 'Loading...';
+  bool showPopupBlockedWarning = false;
+  int signInAttempts = 0;
 
   double downloadProgress = 0.0;
   int downloadedBytes = 0;
@@ -115,11 +117,10 @@ class _ViewerHomePageState extends State<ViewerHomePage>
   static const String _webClientId =
       '95582377829-f64u9joo19djd769u06mp3719hh2vg1l.apps.googleusercontent.com';
 
-  // Use redirect-based sign in for web to avoid popup blockers
+  // Changed to drive.readonly scope for better compatibility
   final GoogleSignIn _gsignIn = GoogleSignIn(
     clientId: _webClientId,
-    scopes: <String>['https://www.googleapis.com/auth/drive.file'],
-    // Force redirect flow on web to avoid popups
+    scopes: <String>['https://www.googleapis.com/auth/drive.readonly'],
     signInOption: SignInOption.standard,
   );
 
@@ -144,22 +145,13 @@ class _ViewerHomePageState extends State<ViewerHomePage>
     super.dispose();
   }
 
-  String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(2)} KB';
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB';
-    }
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-  }
-
   Future<void> _loadFromQuery() async {
     try {
       final param = widget.fileUrl;
       if (param == null || param.isEmpty) {
         setState(() {
           loading = false;
-          error = 'No file specified';
+          error = 'No file specified. Please provide a valid file link.';
         });
         return;
       }
@@ -167,7 +159,6 @@ class _ViewerHomePageState extends State<ViewerHomePage>
         fileUrl = param;
       });
       if (_isGoogleDriveUrl(param)) {
-        // Try silent sign-in first
         await _attemptSilentSignIn();
       } else {
         await _downloadDirectUrl(param);
@@ -184,29 +175,27 @@ class _ViewerHomePageState extends State<ViewerHomePage>
   Future<void> _attemptSilentSignIn() async {
     setState(() {
       loading = true;
-      loadingMessage = 'Checking for existing credentials...';
+      loadingMessage = 'Checking credentials...';
     });
 
     try {
       final user = await _gsignIn.signInSilently(suppressErrors: true);
-      
+
       if (user != null) {
-        // User is already signed in, proceed to download
         print('Silent sign-in successful');
         await _downloadFromDrive();
       } else {
-        // No existing credentials, show sign-in button
-        print('Silent sign-in failed, showing sign-in button');
+        print('No existing credentials found');
         setState(() {
           loading = false;
-          loadingMessage = 'Loading...';
+          loadingMessage = 'Ready to sign in';
         });
       }
     } catch (e) {
       print('Silent sign-in error: $e');
       setState(() {
         loading = false;
-        loadingMessage = 'Loading...';
+        loadingMessage = 'Ready to sign in';
       });
     }
   }
@@ -217,6 +206,7 @@ class _ViewerHomePageState extends State<ViewerHomePage>
       downloadProgress = 0.0;
       downloadedBytes = 0;
       totalBytes = 0;
+      loadingMessage = 'Connecting to server...';
     });
 
     try {
@@ -227,7 +217,8 @@ class _ViewerHomePageState extends State<ViewerHomePage>
         setState(() {
           loading = false;
           isDownloading = false;
-          error = 'Unable to download file';
+          error =
+              'Unable to download file (Status: ${response.statusCode}).\n\nPlease check if the link is valid and accessible.';
         });
         return;
       }
@@ -252,7 +243,8 @@ class _ViewerHomePageState extends State<ViewerHomePage>
         setState(() {
           loading = false;
           isDownloading = false;
-          error = 'Downloaded file is empty';
+          error =
+              'Downloaded file is empty.\n\nThe file may not exist or may have been removed.';
         });
         return;
       }
@@ -269,13 +261,33 @@ class _ViewerHomePageState extends State<ViewerHomePage>
       setState(() {
         loading = false;
         isDownloading = false;
-        error = 'Download failed';
+        error =
+            'Download failed.\n\nPlease check your internet connection and try again.';
       });
     }
   }
 
   void _openReaderIfReady() {
     if (mounted && fileUrl != null && fileBytes != null) {
+      // Validate bytes before opening reader
+      if (fileBytes!.isEmpty) {
+        setState(() {
+          loading = false;
+          error =
+              'The downloaded file is empty.\n\nThe file may be corrupted or invalid. Please try again or contact the file owner.';
+        });
+        return;
+      }
+
+      if (fileBytes!.length < 100) {
+        setState(() {
+          loading = false;
+          error =
+              'The downloaded file appears to be invalid.\n\nThe file is too small to be a valid .lambook file. Please check the file and try again.';
+        });
+        return;
+      }
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         Navigator.of(context).push(
@@ -292,65 +304,78 @@ class _ViewerHomePageState extends State<ViewerHomePage>
     final url = fileUrl;
     if (url == null) return;
 
+    signInAttempts++;
+
     setState(() {
       loading = true;
       error = null;
-      loadingMessage = 'Connecting to Google...';
+      showPopupBlockedWarning = false;
+      loadingMessage = 'Opening sign-in...';
     });
 
     try {
-      // Use standard sign-in which will redirect instead of popup
       final user = await _gsignIn.signIn();
 
       if (user == null) {
-        // User cancelled the sign-in
+        // User cancelled or popup was blocked
         setState(() {
           loading = false;
-          loadingMessage = 'Loading...';
-          error = 'Sign-in was cancelled. Please try again.';
+          loadingMessage = 'Sign-in required';
+          showPopupBlockedWarning = true;
+          error = null; // Clear error to show the popup warning UI instead
         });
         return;
       }
 
       // Check and request scopes if needed
-      const scopes = <String>['https://www.googleapis.com/auth/drive.file'];
+      const scopes = <String>['https://www.googleapis.com/auth/drive.readonly'];
       final hasScope = await _gsignIn.canAccessScopes(scopes);
 
       if (!hasScope) {
         setState(() => loadingMessage = 'Requesting permissions...');
         final granted = await _gsignIn.requestScopes(scopes);
-        
+
         if (!granted) {
           setState(() {
             loading = false;
-            loadingMessage = 'Loading...';
-            error = 'Drive access permission denied';
+            loadingMessage = 'Permission required';
+            error =
+                'Google Drive access is required to view this file.\n\nPlease try again and click "Allow" when prompted.';
           });
           return;
         }
       }
 
-      // Proceed to download
+      // Reset attempts on successful sign-in
+      signInAttempts = 0;
       await _downloadFromDrive();
-
     } catch (e) {
       print('Sign-in error: $e');
-      
+
       String errorMessage;
+
       if (e.toString().contains('popup_closed') ||
           e.toString().contains('popup_blocked_by_browser')) {
-        errorMessage = 'Sign-in window was closed. Please try again.';
+        setState(() {
+          loading = false;
+          showPopupBlockedWarning = true;
+          error = null;
+        });
+        return;
       } else if (e.toString().contains('access_denied')) {
-        errorMessage = 'Access denied. Please grant permissions.';
+        errorMessage =
+            'Google Drive access was denied.\n\nTo view your file, please try again and click "Allow" when prompted.';
       } else if (e.toString().contains('network')) {
-        errorMessage = 'Network error. Check your connection.';
+        errorMessage =
+            'Unable to connect to Google.\n\nPlease check your internet connection and try again.';
       } else {
-        errorMessage = 'Sign-in failed. Please try again.';
+        errorMessage =
+            'Unable to sign in to Google.\n\nPlease try again. If the problem persists, try refreshing the page.';
       }
 
       setState(() {
         loading = false;
-        loadingMessage = 'Loading...';
+        loadingMessage = 'Sign-in required';
         error = errorMessage;
       });
     }
@@ -361,48 +386,66 @@ class _ViewerHomePageState extends State<ViewerHomePage>
     if (url == null) return;
 
     try {
-      setState(() => loadingMessage = 'Connecting to Drive...');
+      setState(() => loadingMessage = 'Connecting to Google Drive...');
 
       final headers = await _gsignIn.currentUser!.authHeaders;
       final api = drive.DriveApi(_GoogleAuthClient(headers));
 
-      setState(() => loadingMessage = 'Checking file...');
+      setState(() => loadingMessage = 'Verifying file access...');
 
       final id = _extractDriveFileId(url);
 
       // Get file metadata first
       drive.File fileMetadata;
       try {
-        fileMetadata = await api.files.get(
-          id,
-          $fields: 'id,name,size,mimeType,capabilities',
-        ) as drive.File;
-        
+        fileMetadata =
+            await api.files.get(id, $fields: 'id,name,size,mimeType')
+                as drive.File;
+
         print('File metadata: ${fileMetadata.toJson()}');
-        
       } catch (e) {
         print('Error getting file metadata: $e');
-        
-        String errorMsg = 'Cannot access file';
-        
+
+        String errorMsg;
+        String errorDetails;
+
         if (e.toString().contains('403')) {
-          errorMsg = 'Access denied (403). This file cannot be accessed.\n\n'
-                     'Possible reasons:\n'
-                     '• File was not created by this app\n'
-                     '• File was not explicitly opened with this app\n'
-                     '• Insufficient permissions\n\n'
-                     'Solution: Ask the file owner to share it with your Google account.';
+          errorMsg = 'Cannot Access File';
+          errorDetails =
+              'You don\'t have permission to view this file.\n\n'
+              '📋 What to do:\n'
+              '1. Ask the file owner to share it with you\n'
+              '2. Make sure you\'re signed in with the correct Google account\n'
+              '3. Check that the file link is correct';
         } else if (e.toString().contains('404')) {
-          errorMsg = 'File not found (404). The file may have been deleted or the link is incorrect.';
+          errorMsg = 'File Not Found';
+          errorDetails =
+              'This file doesn\'t exist or has been deleted.\n\n'
+              '📋 What to do:\n'
+              '1. Check that the link is correct\n'
+              '2. Ask the file owner to verify the file still exists\n'
+              '3. Request a new link if needed';
         } else if (e.toString().contains('401')) {
-          errorMsg = 'Authentication failed (401). Please sign in again.';
+          errorMsg = 'Authentication Failed';
+          errorDetails =
+              'Your session has expired.\n\n'
+              '📋 What to do:\n'
+              'Click "Try Again" below to sign in again';
+        } else {
+          errorMsg = 'Cannot Load File';
+          errorDetails =
+              'Unable to access the file from Google Drive.\n\n'
+              '📋 What to do:\n'
+              '1. Check your internet connection\n'
+              '2. Verify the file link is correct\n'
+              '3. Try signing out and signing in again';
         }
-        
+
         setState(() {
           loading = false;
-          loadingMessage = 'Loading...';
+          loadingMessage = 'Error';
           isDownloading = false;
-          error = errorMsg;
+          error = '$errorMsg\n\n$errorDetails';
         });
         return;
       }
@@ -414,10 +457,14 @@ class _ViewerHomePageState extends State<ViewerHomePage>
       if (fileSize > 500 * 1024 * 1024) {
         setState(() {
           loading = false;
-          loadingMessage = 'Loading...';
+          loadingMessage = 'File Too Large';
           isDownloading = false;
-          error = 'File is too large (${(fileSize / (1024 * 1024)).toStringAsFixed(0)} MB).\n\n'
-                 'Maximum supported size is 500 MB.';
+          error =
+              'File Too Large\n\n'
+              'This file is ${(fileSize / (1024 * 1024)).toStringAsFixed(0)} MB, '
+              'but the maximum supported size is 500 MB.\n\n'
+              '📋 What to do:\n'
+              'Ask the file owner to provide a smaller version of the file.';
         });
         return;
       }
@@ -433,56 +480,60 @@ class _ViewerHomePageState extends State<ViewerHomePage>
       // Download the file
       try {
         print('Starting file download...');
-        
-        final media = await api.files.get(
-          id,
-          downloadOptions: drive.DownloadOptions.fullMedia,
-        ) as drive.Media;
+
+        final media =
+            await api.files.get(
+                  id,
+                  downloadOptions: drive.DownloadOptions.fullMedia,
+                )
+                as drive.Media;
 
         print('Got media stream, reading chunks...');
 
         final List<List<int>> chunksList = [];
         int lastUpdateTime = DateTime.now().millisecondsSinceEpoch;
         int totalDownloaded = 0;
-        
+
         await for (var chunk in media.stream) {
           if (!mounted) return;
-          
+
           chunksList.add(chunk);
           totalDownloaded += chunk.length;
           downloadedBytes = totalDownloaded;
 
           final currentTime = DateTime.now().millisecondsSinceEpoch;
-          
+
           if (currentTime - lastUpdateTime > 300) {
             lastUpdateTime = currentTime;
-            
+
             if (mounted) {
               setState(() {
                 if (totalBytes > 0) {
                   downloadProgress = downloadedBytes / totalBytes;
                 }
-                loadingMessage = 'Downloading... ${(downloadProgress * 100).toStringAsFixed(0)}%';
+                loadingMessage =
+                    'Downloading... ${(downloadProgress * 100).toStringAsFixed(0)}%';
               });
             }
           }
         }
-        
+
         print('Stream completed. Total bytes: $totalDownloaded');
 
         if (chunksList.isEmpty) {
           setState(() {
             loading = false;
-            loadingMessage = 'Loading...';
+            loadingMessage = 'Error';
             isDownloading = false;
-            error = 'Downloaded file is empty.';
+            error =
+                'Downloaded File is Empty\n\nThe file appears to be empty or corrupted.\n\n📋 What to do:\nAsk the file owner to check the file and share a new link.';
           });
           return;
         }
 
         print('Combining chunks...');
         if (!mounted) return;
-        
+
         setState(() {
           loadingMessage = 'Processing file...';
         });
@@ -492,7 +543,7 @@ class _ViewerHomePageState extends State<ViewerHomePage>
         for (var chunk in chunksList) {
           totalSize += chunk.length;
         }
-        
+
         final fileData = Uint8List(totalSize);
         int offset = 0;
         for (var chunk in chunksList) {
@@ -505,7 +556,7 @@ class _ViewerHomePageState extends State<ViewerHomePage>
         setState(() {
           fileBytes = fileData;
           loading = false;
-          loadingMessage = 'Loading...';
+          loadingMessage = 'Ready!';
           isDownloading = false;
           downloadProgress = 1.0;
           error = null;
@@ -513,41 +564,70 @@ class _ViewerHomePageState extends State<ViewerHomePage>
 
         print('Opening reader...');
         _openReaderIfReady();
-        
       } catch (downloadError) {
         print('Download error: $downloadError');
-        
-        String errorMsg = 'Download failed';
-        
+
+        String errorMsg;
+        String errorDetails;
+
         if (downloadError.toString().contains('403')) {
-          errorMsg = 'Permission denied (403). Cannot download this file.';
+          errorMsg = 'Download Not Allowed';
+          errorDetails =
+              'You don\'t have permission to download this file.\n\n'
+              '📋 What to do:\n'
+              'Ask the file owner to grant you download access.';
         } else if (downloadError.toString().contains('404')) {
-          errorMsg = 'File not found (404) during download.';
-        } else if (downloadError.toString().contains('network') || 
-                   downloadError.toString().contains('connection')) {
-          errorMsg = 'Network error. Please check your connection.';
+          errorMsg = 'File Not Found';
+          errorDetails =
+              'The file was not found during download.\n\n'
+              '📋 What to do:\n'
+              'The file may have been deleted. Request a new link.';
+        } else if (downloadError.toString().contains('network') ||
+            downloadError.toString().contains('connection')) {
+          errorMsg = 'Connection Lost';
+          errorDetails =
+              'Network connection was interrupted.\n\n'
+              '📋 What to do:\n'
+              '1. Check your internet connection\n'
+              '2. Click "Try Again" to restart the download';
         } else if (downloadError.toString().contains('timeout')) {
-          errorMsg = 'Download timed out. The file may be too large.';
+          errorMsg = 'Download Timeout';
+          errorDetails =
+              'The download took too long.\n\n'
+              '📋 What to do:\n'
+              '1. Check your internet connection\n'
+              '2. The file may be too large\n'
+              '3. Try again with a better connection';
         } else {
-          errorMsg = 'Download failed: ${downloadError.toString()}';
+          errorMsg = 'Download Failed';
+          errorDetails =
+              'Unable to download the file.\n\n'
+              '📋 What to do:\n'
+              '1. Check your internet connection\n'
+              '2. Click "Try Again" below\n'
+              '3. If it fails again, try refreshing the page';
         }
-        
+
         setState(() {
           loading = false;
-          loadingMessage = 'Loading...';
+          loadingMessage = 'Error';
           isDownloading = false;
-          error = errorMsg;
+          error = '$errorMsg\n\n$errorDetails';
         });
       }
-      
     } catch (e) {
       print('General error: $e');
-      
+
       setState(() {
         loading = false;
-        loadingMessage = 'Loading...';
+        loadingMessage = 'Error';
         isDownloading = false;
-        error = 'Error loading file: ${e.toString()}';
+        error =
+            'Unexpected Error\n\nSomething went wrong while loading your file.\n\n'
+            '📋 What to do:\n'
+            '1. Click "Try Again" below\n'
+            '2. If that doesn\'t work, try refreshing the page\n'
+            '3. Make sure you have a stable internet connection';
       });
     }
   }
@@ -556,40 +636,223 @@ class _ViewerHomePageState extends State<ViewerHomePage>
     final u = Uri.tryParse(input);
     if (u == null) return false;
     final host = u.host.toLowerCase();
-    return host.contains('drive.google.com') || host.contains('docs.google.com');
+    return host.contains('drive.google.com') ||
+        host.contains('docs.google.com');
   }
 
   String _extractDriveFileId(String input) {
     final uri = Uri.tryParse(input);
     if (uri == null) return input;
-    
+
     final idParam = uri.queryParameters['id'];
     if (idParam != null && idParam.isNotEmpty) return idParam;
-    
+
     final m = RegExp(r'/file/d/([^/]+)').firstMatch(uri.path);
     if (m != null) return m.group(1)!;
-    
+
     final m2 = RegExp(r'/d/([^/]+)').firstMatch(uri.path);
     if (m2 != null) return m2.group(1)!;
-    
+
     return input;
   }
 
+  Widget _buildPopupBlockedWarning() {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.block_rounded,
+                size: 56,
+                color: Colors.orange.shade700,
+              ),
+            ),
+            const SizedBox(height: 28),
+            Text(
+              'Sign-in Window Blocked',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: Colors.grey[900],
+                letterSpacing: -0.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        color: Colors.orange.shade700,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Your browser blocked the sign-in window',
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                color: Colors.orange.shade900,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'How to fix this:',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.orange.shade900,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildStep(
+                    '1',
+                    'Look for a popup blocker icon in your browser\'s address bar',
+                  ),
+                  _buildStep('2', 'Click it and select "Always allow popups"'),
+                  _buildStep('3', 'Click "Try Again" below'),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.lightbulb_outline_rounded,
+                          color: Colors.orange.shade700,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Tip: The sign-in window may have opened behind this one. Check your other browser windows!',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Colors.orange.shade900,
+                                  height: 1.5,
+                                  fontSize: 13,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.refresh_rounded, size: 20),
+                label: const Text(
+                  'Try Again',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 18,
+                  ),
+                  backgroundColor: Colors.orange.shade600,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                onPressed: _signInAndLoadDrive,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStep(String number, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: Colors.orange,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                text,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.orange[900],
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDownloadingView() {
-    final downloadedMB = totalBytes > 0 
+    final downloadedMB = totalBytes > 0
         ? (downloadedBytes / (1024 * 1024)).toStringAsFixed(1)
         : '0.0';
-    final totalMB = totalBytes > 0 
+    final totalMB = totalBytes > 0
         ? (totalBytes / (1024 * 1024)).toStringAsFixed(1)
         : '0.0';
-    final percentageText = totalBytes > 0 
+    final percentageText = totalBytes > 0
         ? (downloadProgress * 100).toStringAsFixed(1)
         : '0.0';
 
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 600),
+        constraints: const BoxConstraints(maxWidth: 480),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -598,17 +861,17 @@ class _ViewerHomePageState extends State<ViewerHomePage>
               duration: const Duration(seconds: 2),
               builder: (context, value, child) {
                 return Container(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(28),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.withOpacity(0.1),
+                    color: Colors.indigo.shade50,
                     shape: BoxShape.circle,
                   ),
                   child: Transform.rotate(
                     angle: value * 6.28,
-                    child: const Icon(
+                    child: Icon(
                       Icons.cloud_download_rounded,
-                      size: 64,
-                      color: Colors.indigo,
+                      size: 56,
+                      color: Colors.indigo.shade700,
                     ),
                   ),
                 );
@@ -620,77 +883,66 @@ class _ViewerHomePageState extends State<ViewerHomePage>
               },
             ),
             const SizedBox(height: 32),
-            
             Text(
-              'Downloading Your Lambook',
+              'Downloading Your File',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
+                fontWeight: FontWeight.w700,
+                color: Colors.grey[900],
+                letterSpacing: -0.5,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
+            Text(
+              'This may take a moment depending on file size',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[600],
+                height: 1.5,
               ),
-              decoration: BoxDecoration(
-                color: Colors.indigo.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Downloading...',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.indigo,
-                    ),
-              ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
-            
+            const SizedBox(height: 32),
             if (totalBytes > 0) ...[
-              Text(
-                '$downloadedMB MB of $totalMB MB',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.indigo,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    downloadedMB,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.indigo.shade700,
                     ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-            ],
-            
-            Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.indigo.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                  ),
+                  Text(
+                    ' / $totalMB MB',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[600],
+                    ),
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+            ],
+            Container(
+              width: double.infinity,
+              height: 8,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey[200],
+              ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
                 child: Stack(
                   children: [
-                    Container(
-                      height: 24,
-                      color: Colors.grey[200],
-                    ),
                     FractionallySizedBox(
                       widthFactor: downloadProgress,
                       child: Container(
-                        height: 24,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              Colors.indigo,
-                              Colors.indigo.shade300,
+                              Colors.indigo.shade600,
+                              Colors.indigo.shade400,
                             ],
                           ),
                         ),
@@ -701,58 +953,37 @@ class _ViewerHomePageState extends State<ViewerHomePage>
               ),
             ),
             const SizedBox(height: 12),
-            
             Text(
               '$percentageText%',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[700],
-                  ),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
             ),
-            const SizedBox(height: 32),
-            
+            const SizedBox(height: 28),
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.amber[50],
+                color: Colors.blue.shade50,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber.shade200),
+                border: Border.all(color: Colors.blue.shade100),
               ),
               child: Row(
                 children: [
                   Icon(
                     Icons.info_outline_rounded,
-                    color: Colors.amber[800],
-                    size: 24,
+                    color: Colors.blue.shade700,
+                    size: 20,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Please wait',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyLarge
-                              ?.copyWith(
-                                color: Colors.amber[900],
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Keep this page open. Don\'t switch apps or lock your device.',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                color: Colors.amber[900],
-                                fontWeight: FontWeight.w500,
-                                height: 1.4,
-                              ),
-                        ),
-                      ],
+                    child: Text(
+                      'Keep this page open while downloading',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.blue.shade900,
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
@@ -770,41 +1001,50 @@ class _ViewerHomePageState extends State<ViewerHomePage>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 80,
-                height: 80,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    Colors.indigo.shade300,
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.indigo.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 72,
+                  height: 72,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 4,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Colors.indigo.shade600,
+                    ),
                   ),
                 ),
-              ),
-              Icon(
-                Icons.menu_book_rounded,
-                size: 40,
-                color: Colors.indigo.shade700,
-              ),
-            ],
+                Icon(
+                  Icons.menu_book_rounded,
+                  size: 36,
+                  color: Colors.indigo.shade700,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           Text(
             loadingMessage,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
-                ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: Colors.grey[900],
+              letterSpacing: -0.5,
+            ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
-            'This may take a moment',
+            'Please wait while we prepare your file',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[500],
-                ),
+              color: Colors.grey[600],
+              height: 1.5,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -816,64 +1056,70 @@ class _ViewerHomePageState extends State<ViewerHomePage>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 500),
+        constraints: const BoxConstraints(maxWidth: 520),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.red[50],
+                color: Colors.red.shade50,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.error_outline_rounded,
-                size: 64,
-                color: Colors.red[400],
+                size: 56,
+                color: Colors.red.shade600,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             Text(
-              'Oops! Something went wrong',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
+              'Unable to Load File',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: Colors.grey[900],
+                letterSpacing: -0.5,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey[200]!),
               ),
               child: Text(
                 error!,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[700],
-                    ),
-                textAlign: TextAlign.center,
+                  color: Colors.grey[700],
+                  height: 1.6,
+                ),
+                textAlign: TextAlign.left,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             if (fileUrl != null && _isGoogleDriveUrl(fileUrl!)) ...[
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Try Again'),
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  label: const Text(
+                    'Try Again',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 16,
+                      horizontal: 32,
+                      vertical: 18,
                     ),
                     backgroundColor: Colors.indigo,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
+                    elevation: 0,
                   ),
                   onPressed: _signInAndLoadDrive,
                 ),
@@ -886,114 +1132,152 @@ class _ViewerHomePageState extends State<ViewerHomePage>
   }
 
   Widget _buildReadyView() {
+    // Auto-open reader if file is ready (no need for extra button click)
+    if (fileBytes != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && fileBytes != null) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) =>
+                  LambookReaderScreen(fileUrl: fileUrl!, bytes: fileBytes!),
+            ),
+          );
+        }
+      });
+      // Show loading while transitioning
+      return _buildLoadingView();
+    }
+
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 600),
+        constraints: const BoxConstraints(maxWidth: 480),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
-              child: Image.asset(
-                'assets/logo/document.png',
-                fit: BoxFit.contain,
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.indigo.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.menu_book_rounded,
+                size: 48,
+                color: Colors.indigo.shade700,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             Text(
-              fileBytes != null ? 'Ready to View!' : 'Ready to Load',
+              'Sign in to View Your File',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
+                fontWeight: FontWeight.w700,
+                color: Colors.grey[900],
+                letterSpacing: -0.5,
+              ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            Text(
+              'We need your permission to access this file from Google Drive',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[600],
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey[200]!),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        _isGoogleDriveUrl(fileUrl!)
-                            ? Icons.cloud_rounded
-                            : Icons.link_rounded,
-                        size: 20,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Source',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ],
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.cloud_rounded,
+                      size: 24,
+                      color: Colors.indigo.shade600,
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  SelectableText(
-                    fileUrl!,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[700],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Google Drive File',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
                         ),
+                        const SizedBox(height: 4),
+                        Text(
+                          fileUrl!.length > 50
+                              ? '${fileUrl!.substring(0, 50)}...'
+                              : fileUrl!,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: Colors.grey[700], fontSize: 12),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 32),
-            if (fileBytes == null && _isGoogleDriveUrl(fileUrl!))
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.login_rounded),
-                  label: const Text('Sign in with Google'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    backgroundColor: Colors.indigo,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                  ),
-                  onPressed: _signInAndLoadDrive,
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.login_rounded, size: 22),
+                label: const Text(
+                  'Sign in with Google',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
-              ),
-            if (fileBytes != null)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.auto_stories_rounded),
-                  label: const Text('Your Lambo is opening. Please wait…'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    backgroundColor: Colors.indigo,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  backgroundColor: Colors.indigo,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => LambookReaderScreen(
-                          fileUrl: fileUrl!,
-                          bytes: fileBytes!,
-                        ),
-                      ),
-                    );
-                  },
+                  elevation: 0,
                 ),
+                onPressed: _signInAndLoadDrive,
               ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.lock_outline_rounded,
+                  size: 14,
+                  color: Colors.grey[500],
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Read-only access • Your data is secure',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[500],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -1008,14 +1292,14 @@ class _ViewerHomePageState extends State<ViewerHomePage>
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: Colors.indigo.shade50,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: SizedBox(
                       height: 24,
@@ -1030,9 +1314,10 @@ class _ViewerHomePageState extends State<ViewerHomePage>
                   Text(
                     'Lamlayers',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                        ),
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey[900],
+                      letterSpacing: -0.5,
+                    ),
                   ),
                 ],
               ),
@@ -1045,6 +1330,8 @@ class _ViewerHomePageState extends State<ViewerHomePage>
                   child: Builder(
                     builder: (_) {
                       if (isDownloading) return _buildDownloadingView();
+                      if (showPopupBlockedWarning)
+                        return _buildPopupBlockedWarning();
                       if (loading) return _buildLoadingView();
                       if (error != null) return _buildErrorView();
                       return _buildReadyView();

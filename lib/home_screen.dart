@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:html' as html;
-
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -28,6 +26,8 @@ class HomeScreen extends StatelessWidget {
                       _buildHowItWorksSection(context),
                       SizedBox(height: _getResponsiveSpacing(context) * 2),
                       _buildGoogleAuthInfoSection(context),
+                      SizedBox(height: _getResponsiveSpacing(context) * 2),
+                      _buildTestingInstructionsSection(context),
                       SizedBox(height: _getResponsiveSpacing(context) * 2),
                       _buildCTASection(context),
                       SizedBox(height: _getResponsiveSpacing(context) * 2),
@@ -328,6 +328,27 @@ class HomeScreen extends StatelessWidget {
               ),
               elevation: 8,
               shadowColor: Colors.black.withOpacity(0.3),
+            ),
+          ),
+          SizedBox(height: 16),
+          // Privacy Policy Link - Prominently displayed
+          TextButton.icon(
+            onPressed: () => context.go('/privacy'),
+            icon: const Icon(Icons.privacy_tip_outlined, size: 18),
+            label: const Text('Privacy Policy'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white.withOpacity(0.9),
+              textStyle: TextStyle(
+                fontSize: _getResponsiveFontSize(
+                  context,
+                  mobile: 14,
+                  tablet: 15,
+                  desktop: 16,
+                ),
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+                decorationColor: Colors.white.withOpacity(0.9),
+              ),
             ),
           ),
         ],
@@ -925,6 +946,241 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildTestingInstructionsSection(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(_getResponsivePadding(context) * 2),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF10B981).withOpacity(0.1),
+            const Color(0xFF059669).withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(
+          color: const Color(0xFF10B981).withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF10B981).withOpacity(0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Icon(
+              Icons.login_rounded,
+              size: _getResponsiveFontSize(
+                context,
+                mobile: 48,
+                tablet: 56,
+                desktop: 64,
+              ),
+              color: const Color(0xFF10B981),
+            ),
+          ),
+          SizedBox(height: _getResponsiveSpacing(context)),
+          Text(
+            'How to Test Login & OAuth',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: _getResponsiveFontSize(
+                context,
+                mobile: 28,
+                tablet: 36,
+                desktop: 42,
+              ),
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF0F172A),
+              letterSpacing: -0.5,
+            ),
+          ),
+          SizedBox(height: 16),
+          Container(
+            padding: EdgeInsets.all(_getResponsivePadding(context) * 1.5),
+            decoration: BoxDecoration(
+              color: const Color(0xFFDCFCE7),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF10B981).withOpacity(0.3),
+                width: 2,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: const Color(0xFF059669),
+                  size: 28,
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'For OAuth Verification: Ensure 2FA is DISABLED on your test Google account before testing.',
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(
+                        context,
+                        mobile: 14,
+                        tablet: 15,
+                        desktop: 16,
+                      ),
+                      color: const Color(0xFF065F46),
+                      fontWeight: FontWeight.w600,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: _getResponsiveSpacing(context) * 1.5),
+          _buildTestingStep(
+            context,
+            '1',
+            'Get a Google Drive File URL',
+            'Upload any file to Google Drive and get its shareable link. Example: https://drive.google.com/file/d/FILE_ID/view',
+            const Color(0xFF10B981),
+          ),
+          SizedBox(height: _getResponsiveSpacing(context)),
+          _buildTestingStep(
+            context,
+            '2',
+            'Access the Viewer',
+            'Navigate to: https://lamlayers.zenithsyntax.com/#/lambook-view?file=YOUR_DRIVE_FILE_URL\n\nReplace YOUR_DRIVE_FILE_URL with your actual Google Drive file URL.',
+            const Color(0xFF059669),
+          ),
+          SizedBox(height: _getResponsiveSpacing(context)),
+          _buildTestingStep(
+            context,
+            '3',
+            'Sign In with Google',
+            'Click "Sign in with Google" button. On the OAuth consent screen:\n• If you see "unverified app" warning, click "Advanced" → "Go to Lamlayers Viewer (unsafe)"\n• Select your Google account (2FA must be disabled)\n• Click "Allow" to grant read-only Drive access',
+            const Color(0xFF047857),
+          ),
+          SizedBox(height: _getResponsiveSpacing(context)),
+          _buildTestingStep(
+            context,
+            '4',
+            'Verify Access',
+            'After authentication, the app will download and display the file. This confirms the OAuth flow is working correctly.',
+            const Color(0xFF065F46),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTestingStep(
+    BuildContext context,
+    String number,
+    String title,
+    String description,
+    Color color,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(_getResponsivePadding(context) * 1.5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: _isMobile(context) ? 48 : 56,
+            height: _isMobile(context) ? 48 : 56,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [color, color.withOpacity(0.7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: TextStyle(
+                  fontSize: _getResponsiveFontSize(
+                    context,
+                    mobile: 24,
+                    tablet: 28,
+                    desktop: 32,
+                  ),
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: _getResponsiveSpacing(context)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: _getResponsiveFontSize(
+                      context,
+                      mobile: 18,
+                      tablet: 20,
+                      desktop: 22,
+                    ),
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                SizedBox(height: 8),
+                SelectableText(
+                  description,
+                  style: TextStyle(
+                    fontSize: _getResponsiveFontSize(
+                      context,
+                      mobile: 14,
+                      tablet: 15,
+                      desktop: 16,
+                    ),
+                    color: const Color(0xFF475569),
+                    height: 1.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCTASection(BuildContext context) {
     return Container(
       width: double.infinity,
@@ -1074,16 +1330,27 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         SizedBox(height: _getResponsiveSpacing(context)),
-        // Privacy and Terms Links
+        // Privacy and Terms Links - Prominently displayed
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextButton.icon(
-  onPressed: () => html.window.open('https://lamlayers.zenithsyntax.com/#/privacy', '_blank'),
-  icon: const Icon(Icons.privacy_tip_outlined, size: 18),
-  label: const Text('Privacy Policy'),
-),
-
+              onPressed: () => context.go('/privacy'),
+              icon: const Icon(Icons.privacy_tip_outlined, size: 18),
+              label: const Text('Privacy Policy'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF8B5CF6),
+                textStyle: TextStyle(
+                  fontSize: _getResponsiveFontSize(
+                    context,
+                    mobile: 14,
+                    tablet: 15,
+                    desktop: 16,
+                  ),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
             Text(
               ' • ',
               style: TextStyle(

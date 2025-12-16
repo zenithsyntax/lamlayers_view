@@ -72,7 +72,7 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
     final size = MediaQuery.of(context).size;
     final shortestSide = size.shortestSide;
     final longestSide = size.longestSide;
-    
+
     // Consider it a phone if:
     // 1. Shortest side is less than 600 (standard tablet breakpoint)
     // 2. Device has a portrait-like aspect ratio (longest/shortest > 1.4)
@@ -176,16 +176,87 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
 
   Future<void> _parseLambook() async {
     try {
+      // Validate bytes before attempting to parse
+      if (widget.bytes.isEmpty) {
+        throw Exception(
+          'The file is empty. Please provide a valid .lambook file.',
+        );
+      }
+
+      if (widget.bytes.length < 100) {
+        throw Exception(
+          'The file appears to be corrupted or invalid. Please check the file and try again.',
+        );
+      }
+
       _setProgress(1);
-      final archive = ZipDecoder().decodeBytes(widget.bytes, verify: false);
+
+      // Validate ZIP file signature (PK header)
+      if (widget.bytes.length < 4 ||
+          widget.bytes[0] != 0x50 ||
+          widget.bytes[1] != 0x4B) {
+        throw Exception(
+          'Invalid file format. This does not appear to be a valid .lambook file. '
+          'A .lambook file should be a ZIP archive. Please ensure you are using a valid .lambook file.',
+        );
+      }
+
+      // Try to decode as ZIP archive
+      Archive archive;
+      try {
+        archive = ZipDecoder().decodeBytes(widget.bytes, verify: false);
+      } catch (e) {
+        throw Exception(
+          'Invalid file format. This does not appear to be a valid .lambook file. '
+          'The file may be corrupted or in an unsupported format. Please ensure you are using a valid .lambook file.',
+        );
+      }
+
+      if (archive.files.isEmpty) {
+        throw Exception(
+          'The file appears to be empty or corrupted. Please check the file and try again.',
+        );
+      }
+
       _setProgress(10);
 
-      // Parse scrapbook.json
-      final metaFile = archive.files.firstWhere(
-        (f) => f.name == 'scrapbook.json',
-        orElse: () => throw Exception('scrapbook.json not found'),
-      );
-      final metaJson = json.decode(utf8.decode(metaFile.content as List<int>));
+      // Parse scrapbook.json - search flexibly for the file
+      // Handle cases where file might be in root or subdirectory, with different path separators
+      // If scrapbook.json is missing, use default values to allow the app to function
+      ArchiveFile? metaFile;
+      Map<String, dynamic> metaJson = {};
+
+      // Try to find scrapbook.json flexibly (handles subdirectories, case-insensitive)
+      try {
+        metaFile = archive.files.firstWhere(
+          (f) =>
+              f.isFile &&
+              f.name
+                  .toLowerCase()
+                  .replaceAll('\\', '/')
+                  .endsWith('scrapbook.json'),
+        );
+
+        // If found, parse it
+        metaJson =
+            json.decode(utf8.decode(metaFile.content as List<int>))
+                as Map<String, dynamic>;
+      } catch (e) {
+        // If scrapbook.json is not found, use default values
+        // This allows the app to still function and display pages, enabling OAuth verification
+        final availableFiles = archive.files
+            .where((f) => f.isFile)
+            .map((f) => f.name)
+            .take(10)
+            .toList();
+
+        print(
+          'Warning: scrapbook.json not found, using default values. Error: $e',
+        );
+        print('Available files in archive: ${availableFiles.join(", ")}');
+        // Continue with empty metaJson - defaults will be used for all metadata
+      }
+
       _setProgress(20);
 
       // Extract metadata
@@ -315,7 +386,22 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
       if (mounted) setState(() => _loading = false);
       _setProgress(100);
     } catch (e) {
-      _error = 'Failed to parse .lambook: $e';
+      // Provide user-friendly error messages
+      String errorMessage;
+      if (e.toString().contains('scrapbook.json') ||
+          e.toString().contains('Invalid file format') ||
+          e.toString().contains('corrupted') ||
+          e.toString().contains('empty')) {
+        errorMessage = e.toString().replaceFirst('Exception: ', '');
+      } else if (e.toString().contains('Failed to parse')) {
+        errorMessage =
+            'Unable to open this file. It may be corrupted or in an unsupported format.\n\nPlease ensure you are using a valid .lambook file.';
+      } else {
+        errorMessage =
+            'Unable to open this file.\n\n${e.toString().replaceFirst('Exception: ', '')}';
+      }
+
+      _error = errorMessage;
       _pages = <PageData>[];
       if (mounted) setState(() => _loading = false);
     }
@@ -352,29 +438,77 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
         backgroundColor: _scaffoldBgColor,
         body: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
+            constraints: const BoxConstraints(maxWidth: 400),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.menu_book_rounded,
-                    size: 56,
-                    color: Colors.indigo,
+                  Container(
+                    padding: const EdgeInsets.all(28),
+                    decoration: BoxDecoration(
+                      color: Colors.indigo.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.menu_book_rounded,
+                      size: 48,
+                      color: Colors.indigo,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  LinearProgressIndicator(
-                    value: _progress / 100,
-                    minHeight: 8,
-                    borderRadius: const BorderRadius.all(Radius.circular(8)),
+                  const SizedBox(height: 32),
+                  Text(
+                    'Preparing Your Lambook',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey[900],
+                      letterSpacing: -0.5,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Loading scrapbook… $_progress%',
-                    style: const TextStyle(
+                    'This will only take a moment',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  Container(
+                    width: double.infinity,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: Colors.grey[200],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Stack(
+                        children: [
+                          FractionallySizedBox(
+                            widthFactor: _progress / 100,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.indigo.shade600,
+                                    Colors.indigo.shade400,
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '$_progress%',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF334155),
+                      color: Colors.grey[700],
                     ),
                   ),
                 ],
@@ -388,19 +522,54 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
       return Scaffold(
         backgroundColor: _scaffoldBgColor,
         body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(
-                  _error!,
-                  style: const TextStyle(color: Colors.red, fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.error_outline_rounded,
+                      size: 56,
+                      color: Colors.red.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  Text(
+                    'Unable to Load File',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey[900],
+                      letterSpacing: -0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey[200]!),
+                    ),
+                    child: Text(
+                      _error!,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[700],
+                        height: 1.6,
+                      ),
+                      textAlign: TextAlign.left,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -477,7 +646,8 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
                               child: Container(
                                 width:
                                     MediaQuery.of(context).size.height * 0.82,
-                                height: MediaQuery.of(context).size.width * 0.61,
+                                height:
+                                    MediaQuery.of(context).size.width * 0.61,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
@@ -660,7 +830,7 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
                           size: 24.sp,
                         ),
                         padding: const EdgeInsets.all(12),
-                        constraints:  BoxConstraints(
+                        constraints: BoxConstraints(
                           minWidth: 50.w,
                           minHeight: 50.h,
                         ),
@@ -682,7 +852,7 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
                           size: 24.sp,
                         ),
                         padding: const EdgeInsets.all(12),
-                        constraints:  BoxConstraints(
+                        constraints: BoxConstraints(
                           minWidth: 50.w,
                           minHeight: 50.h,
                         ),
