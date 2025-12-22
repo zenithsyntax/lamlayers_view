@@ -744,111 +744,108 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
                           ),
                         ),
 
-                        // Interactive book (MIDDLE LAYER - pages flip freely without clipping)
+                        // Interactive book (TOP LAYER - pages flip on top of cover)
                         Center(
                           child: SizedBox(
                             width: bookWidth,
                             height: bookHeight,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: InteractiveBook(
-                                pagesBoundaryIsEnabled: false,
-                                controller: _pageController,
-                                pageCount: _pages.length,
-                                aspectRatio: aspectRatio,
-                                pageViewMode: PageViewMode.double,
-                                onPageChanged: _onPageChanged,
-                                settings: FlipSettings(
-                                  startPageIndex: 0,
-                                  usePortrait: false,
-                                  flippingTime: 1200,
-                                  swipeDistance: 1200,
-                                ),
-                                builder: (context, pageIndex, constraints) {
-                                  if (pageIndex >= _pages.length) {
-                                    return Container(
-                                      color: Colors.white,
-                                      child: const Center(
-                                        child: Text(
-                                          'End of Book',
-                                          style: TextStyle(
+                            child: InteractiveBook(
+                              pagesBoundaryIsEnabled: false,
+                              controller: _pageController,
+                              pageCount: _pages.length,
+                              aspectRatio: aspectRatio,
+                              pageViewMode: PageViewMode.double,
+                              onPageChanged: _onPageChanged,
+                              settings: FlipSettings(
+                                startPageIndex: 0,
+                                usePortrait: false,
+                                flippingTime: 1200,
+                                swipeDistance: 1200,
+                              ),
+                              builder: (context, pageIndex, constraints) {
+                                if (pageIndex >= _pages.length) {
+                                  return Container(
+                                    color: Colors.white,
+                                    child: const Center(
+                                      child: Text(
+                                        'End of Book',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                final page = _pages[pageIndex];
+
+                                // Try to get thumbnail first, then background image
+                                final imageBytes =
+                                    page.thumbnailBytes ??
+                                    page.backgroundImageBytes;
+
+                                if (imageBytes != null) {
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      color: page.backgroundColor,
+                                    ),
+                                    child: Stack(
+                                      children: [
+                                        // Background image
+                                        Positioned.fill(
+                                          child: Image.memory(
+                                            imageBytes,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+
+                                // Fallback: show page name or default content
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: page.backgroundColor,
+                                    gradient:
+                                        page.backgroundColor == Colors.white
+                                        ? const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFFF8FAFC),
+                                              Color(0xFFE2E8F0),
+                                            ],
+                                          )
+                                        : null,
+                                  ),
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.insert_drive_file_outlined,
+                                          color: Color(0xFF94A3B8),
+                                          size: 48,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          page.name,
+                                          style: const TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,
                                             color: Color(0xFF64748B),
                                           ),
+                                          textAlign: TextAlign.center,
                                         ),
-                                      ),
-                                    );
-                                  }
-
-                                  final page = _pages[pageIndex];
-
-                                  // Try to get thumbnail first, then background image
-                                  final imageBytes =
-                                      page.thumbnailBytes ??
-                                      page.backgroundImageBytes;
-
-                                  if (imageBytes != null) {
-                                    return Container(
-                                      decoration: BoxDecoration(
-                                        color: page.backgroundColor,
-                                      ),
-                                      child: Stack(
-                                        children: [
-                                          // Background image
-                                          Positioned.fill(
-                                            child: Image.memory(
-                                              imageBytes,
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }
-
-                                  // Fallback: show page name or default content
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      color: page.backgroundColor,
-                                      gradient:
-                                          page.backgroundColor == Colors.white
-                                              ? const LinearGradient(
-                                                  begin: Alignment.topLeft,
-                                                  end: Alignment.bottomRight,
-                                                  colors: [
-                                                    Color(0xFFF8FAFC),
-                                                    Color(0xFFE2E8F0),
-                                                  ],
-                                                )
-                                              : null,
+                                      ],
                                     ),
-                                    child: Center(
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          const Icon(
-                                            Icons.insert_drive_file_outlined,
-                                            color: Color(0xFF94A3B8),
-                                            size: 48,
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            page.name,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF64748B),
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ),
