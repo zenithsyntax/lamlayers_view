@@ -629,237 +629,278 @@ class _LambookReaderScreenState extends State<LambookReaderScreen> {
           Center(
             child: RotatedBox(
               quarterTurns: 1,
-              child: SizedBox(
-                width: double.infinity,
-                height: double.infinity,
-                child: Stack(
-                  children: [
-                    // Background book cover
-                    Center(
-                      child: SizedBox(
-                        width: MediaQuery.of(context).size.height * 0.825,
-                        height: MediaQuery.of(context).size.width * 0.76,
-                        child: Stack(
-                          children: [
-                            // Right cover (full background)
-                            Center(
-                              child: Container(
-                                width:
-                                    MediaQuery.of(context).size.height * 0.82,
-                                height:
-                                    MediaQuery.of(context).size.width * 0.61,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                      blurRadius: 10,
-                                      offset: const Offset(4, 4),
-                                    ),
-                                  ],
-                                  color: _rightCoverImageBytes == null
-                                      ? _rightCoverColor
-                                      : null,
-                                  image: _rightCoverImageBytes != null
-                                      ? DecorationImage(
-                                          image: MemoryImage(
-                                            _rightCoverImageBytes!,
-                                          ),
-                                          fit: BoxFit.cover,
-                                        )
-                                      : null,
-                                ),
-                              ),
-                            ),
-                            // Left cover (half size, left aligned)
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Container(
-                                width:
-                                    MediaQuery.of(context).size.height *
-                                    0.815 /
-                                    2,
-                                height:
-                                    MediaQuery.of(context).size.width * 0.62,
-                                decoration: BoxDecoration(
-                                  borderRadius: const BorderRadius.only(
-                                    bottomLeft: Radius.circular(16),
-                                    topLeft: Radius.circular(16),
-                                  ),
-                                  color: _leftCoverImageBytes == null
-                                      ? _leftCoverColor
-                                      : null,
-                                  image: _leftCoverImageBytes != null
-                                      ? DecorationImage(
-                                          image: MemoryImage(
-                                            _leftCoverImageBytes!,
-                                          ),
-                                          fit: BoxFit.cover,
-                                        )
-                                      : null,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Calculate aspect ratio (same as InteractiveBook)
+                  double aspectRatio;
+                  try {
+                    if (_pageWidth > 0 && _pageHeight > 0) {
+                      aspectRatio = (_pageWidth * 2) / _pageHeight;
+                    } else {
+                      aspectRatio = 1.4;
+                    }
+                    if (aspectRatio <= 0 ||
+                        !aspectRatio.isFinite ||
+                        aspectRatio.isNaN) {
+                      aspectRatio = 1.4;
+                    }
+                  } catch (e) {
+                    aspectRatio = 1.4;
+                  }
 
-                    // Interactive book pages
-                    Center(
-                      child: SizedBox(
-                        width: MediaQuery.of(context).size.height * 0.8,
-                        height: MediaQuery.of(context).size.width * 0.9,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: InteractiveBook(
-                            pagesBoundaryIsEnabled: false,
-                            controller: _pageController,
-                            pageCount: _pages.length,
-                            aspectRatio: (_pageWidth * 2) / _pageHeight,
-                            pageViewMode: PageViewMode.double,
-                            onPageChanged: _onPageChanged,
-                            settings: FlipSettings(
-                              startPageIndex: 0,
-                              usePortrait: false,
-                              flippingTime: 1200,
-                              swipeDistance: 1200,
-                            ),
-                            builder: (context, pageIndex, constraints) {
-                              if (pageIndex >= _pages.length) {
-                                return Container(
-                                  color: Colors.white,
-                                  child: const Center(
-                                    child: Text(
-                                      'End of Book',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF64748B),
-                                      ),
+                  // Calculate book dimensions based on available space
+                  final availableWidth = constraints.maxWidth;
+                  final availableHeight = constraints.maxHeight;
+
+                  // Calculate book size maintaining aspect ratio
+                  double bookWidth;
+                  double bookHeight;
+
+                  if (availableWidth / availableHeight > aspectRatio) {
+                    // Height constrained
+                    bookHeight = availableHeight * 0.85; // Use 85% of height
+                    bookWidth = bookHeight * aspectRatio;
+                  } else {
+                    // Width constrained
+                    bookWidth = availableWidth * 0.9; // Use 90% of width
+                    bookHeight = bookWidth / aspectRatio;
+                  }
+
+                  // Cover dimensions (slightly larger than book)
+                  final coverWidth = bookWidth * 1.03;
+                  final coverHeight = bookHeight * 1.08;
+                  final leftCoverWidth = coverWidth / 2;
+
+                  return SizedBox(
+                    width: availableWidth,
+                    height: availableHeight,
+                    child: Stack(
+                      children: [
+                        // Background book cover (BOTTOM LAYER - acts as frame)
+                        Center(
+                          child: SizedBox(
+                            width: coverWidth,
+                            height: coverHeight,
+                            child: Stack(
+                              children: [
+                                // Right cover (full background)
+                                Center(
+                                  child: Container(
+                                    width: coverWidth,
+                                    height: coverHeight,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.2,
+                                          ),
+                                          blurRadius: 10,
+                                          offset: const Offset(4, 4),
+                                        ),
+                                      ],
+                                      color: _rightCoverImageBytes == null
+                                          ? _rightCoverColor
+                                          : null,
+                                      image: _rightCoverImageBytes != null
+                                          ? DecorationImage(
+                                              image: MemoryImage(
+                                                _rightCoverImageBytes!,
+                                              ),
+                                              fit: BoxFit.cover,
+                                            )
+                                          : null,
                                     ),
                                   ),
-                                );
-                              }
-
-                              final page = _pages[pageIndex];
-
-                              // Try to get thumbnail first, then background image
-                              final imageBytes =
-                                  page.thumbnailBytes ??
-                                  page.backgroundImageBytes;
-
-                              if (imageBytes != null) {
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    color: page.backgroundColor,
-                                  ),
-                                  child: Stack(
-                                    children: [
-                                      // Background image
-                                      Positioned.fill(
-                                        child: Image.memory(
-                                          imageBytes,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
-
-                              // Fallback: show page name or default content
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: page.backgroundColor,
-                                  gradient: page.backgroundColor == Colors.white
-                                      ? const LinearGradient(
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                          colors: [
-                                            Color(0xFFF8FAFC),
-                                            Color(0xFFE2E8F0),
-                                          ],
-                                        )
-                                      : null,
                                 ),
-                                child: Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.insert_drive_file_outlined,
-                                        color: Color(0xFF94A3B8),
-                                        size: 48,
+
+                                // Left cover (overlays left half)
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Container(
+                                    width: leftCoverWidth,
+                                    height: coverHeight,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.only(
+                                        bottomLeft: Radius.circular(16),
+                                        topLeft: Radius.circular(16),
                                       ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        page.name,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF64748B),
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
+                                      color: _leftCoverImageBytes == null
+                                          ? _leftCoverColor
+                                          : null,
+                                      image: _leftCoverImageBytes != null
+                                          ? DecorationImage(
+                                              image: MemoryImage(
+                                                _leftCoverImageBytes!,
+                                              ),
+                                              fit: BoxFit.cover,
+                                            )
+                                          : null,
+                                    ),
                                   ),
                                 ),
-                              );
-                            },
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ),
 
-                    // Navigation arrows
-                    Positioned(
-                      bottom: 20.h,
-                      left: 20.w,
-                      child: IconButton(
-                        onPressed: _currentLeftPage > 0
-                            ? _goToPreviousPage
-                            : null,
-                        icon: Icon(
-                          Icons.arrow_back_ios,
-                          color: _currentLeftPage > 0
-                              ? const Color(0xFF0F172A)
-                              : const Color(0xFF94A3B8),
-                          size: 24.sp,
-                        ),
-                        padding: const EdgeInsets.all(12),
-                        constraints: BoxConstraints(
-                          minWidth: 50.w,
-                          minHeight: 50.h,
-                        ),
-                      ),
-                    ),
+                        // Interactive book (MIDDLE LAYER - pages flip freely without clipping)
+                        Center(
+                          child: SizedBox(
+                            width: bookWidth,
+                            height: bookHeight,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: InteractiveBook(
+                                pagesBoundaryIsEnabled: false,
+                                controller: _pageController,
+                                pageCount: _pages.length,
+                                aspectRatio: aspectRatio,
+                                pageViewMode: PageViewMode.double,
+                                onPageChanged: _onPageChanged,
+                                settings: FlipSettings(
+                                  startPageIndex: 0,
+                                  usePortrait: false,
+                                  flippingTime: 1200,
+                                  swipeDistance: 1200,
+                                ),
+                                builder: (context, pageIndex, constraints) {
+                                  if (pageIndex >= _pages.length) {
+                                    return Container(
+                                      color: Colors.white,
+                                      child: const Center(
+                                        child: Text(
+                                          'End of Book',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF64748B),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
 
-                    Positioned(
-                      bottom: 20.h,
-                      right: 20.w,
-                      child: IconButton(
-                        onPressed: _currentRightPage < _pages.length - 1
-                            ? _goToNextPage
-                            : null,
-                        icon: Icon(
-                          Icons.arrow_forward_ios,
-                          color: _currentRightPage < _pages.length - 1
-                              ? const Color(0xFF0F172A)
-                              : const Color(0xFF94A3B8),
-                          size: 24.sp,
+                                  final page = _pages[pageIndex];
+
+                                  // Try to get thumbnail first, then background image
+                                  final imageBytes =
+                                      page.thumbnailBytes ??
+                                      page.backgroundImageBytes;
+
+                                  if (imageBytes != null) {
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        color: page.backgroundColor,
+                                      ),
+                                      child: Stack(
+                                        children: [
+                                          // Background image
+                                          Positioned.fill(
+                                            child: Image.memory(
+                                              imageBytes,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }
+
+                                  // Fallback: show page name or default content
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      color: page.backgroundColor,
+                                      gradient:
+                                          page.backgroundColor == Colors.white
+                                              ? const LinearGradient(
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                  colors: [
+                                                    Color(0xFFF8FAFC),
+                                                    Color(0xFFE2E8F0),
+                                                  ],
+                                                )
+                                              : null,
+                                    ),
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(
+                                            Icons.insert_drive_file_outlined,
+                                            color: Color(0xFF94A3B8),
+                                            size: 48,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            page.name,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF64748B),
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
                         ),
-                        padding: const EdgeInsets.all(12),
-                        constraints: BoxConstraints(
-                          minWidth: 50.w,
-                          minHeight: 50.h,
+
+                        // Navigation arrows
+                        Positioned(
+                          bottom: 20.h,
+                          left: 20.w,
+                          child: IconButton(
+                            onPressed: _currentLeftPage > 0
+                                ? _goToPreviousPage
+                                : null,
+                            icon: Icon(
+                              Icons.arrow_back_ios,
+                              color: _currentLeftPage > 0
+                                  ? const Color(0xFF0F172A)
+                                  : const Color(0xFF94A3B8),
+                              size: 15.sp, // Reduced size to match snippet
+                            ),
+                            padding: EdgeInsets.all(8.w),
+                            constraints: BoxConstraints(
+                              minWidth: 50.w,
+                              minHeight: 50.h,
+                            ),
+                          ),
                         ),
-                      ),
+
+                        Positioned(
+                          bottom: 20.h,
+                          right: 20.w,
+                          child: IconButton(
+                            onPressed: _currentRightPage < _pages.length - 1
+                                ? _goToNextPage
+                                : null,
+                            icon: Icon(
+                              Icons.arrow_forward_ios,
+                              color: _currentRightPage < _pages.length - 1
+                                  ? const Color(0xFF0F172A)
+                                  : const Color(0xFF94A3B8),
+                              size: 15.sp, // Reduced size to match snippet
+                            ),
+                            padding: EdgeInsets.all(8.w),
+                            constraints: BoxConstraints(
+                              minWidth: 50.w,
+                              minHeight: 50.h,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ),
