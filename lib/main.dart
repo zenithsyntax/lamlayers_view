@@ -288,16 +288,52 @@ class _ViewerHomePageState extends State<ViewerHomePage>
         return;
       }
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) =>
-                LambookReaderScreen(fileUrl: fileUrl!, bytes: fileBytes!),
+      // iOS Web Memory Warning
+      // Safari on iOS has strict memory limits (approx 200-300MB for canvas/images).
+      // Large ZIPs + decoded images often crash it.
+      final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+      final int sizeInMB = fileBytes!.length ~/ (1024 * 1024);
+      
+      if (isIOS && sizeInMB > 100) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Large File Warning'),
+            content: Text(
+              'This file is $sizeInMB MB. iOS devices may run out of memory and crash with files larger than 100MB.\n\n'
+              'If the app crashes, please use a computer or an Android device.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close dialog
+                  _navigateToReader();
+                },
+                child: const Text('Continue Anyway'),
+              ),
+            ],
           ),
         );
-      });
+      } else {
+        _navigateToReader();
+      }
     }
+  }
+
+  void _navigateToReader() {
+    // Use pushReplacement to DESTROY the ViewerHomePage and free its memory.
+    // This removes the reference to 'fileBytes' in this widget's state,
+    // passing ownership to the next screen.
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) =>
+            LambookReaderScreen(fileUrl: fileUrl!, bytes: fileBytes!),
+      ),
+    );
+    
+    // Explicitly help GC (though widget dispose should handle it)
+    fileBytes = null; 
   }
 
   Future<void> _signInAndLoadDrive() async {
