@@ -368,6 +368,8 @@ class _ViewerHomePageState extends State<ViewerHomePage>
         }
       }
 
+      // Small delay to ensure token propagation
+      await Future.delayed(const Duration(milliseconds: 500));
       await _downloadFromDrive(silentMode: false);
     } catch (e) {
       print('Sign-in error: $e');
@@ -395,7 +397,7 @@ class _ViewerHomePageState extends State<ViewerHomePage>
         setState(() {
           loading = false;
           errorTitle = title;
-          error = msg;
+          error = '$msg\n\nDebug info: $e';
           showTroubleshooting = true;
         });
       }
@@ -407,7 +409,7 @@ class _ViewerHomePageState extends State<ViewerHomePage>
     if (url == null) return;
     
     int retryCount = 0;
-    const maxRetries = 1;
+    const maxRetries = 3;
 
     while (true) {
       try {
@@ -567,7 +569,7 @@ class _ViewerHomePageState extends State<ViewerHomePage>
             loading = false;
             isDownloading = false;
             errorTitle = title;
-            error = msg;
+            error = '$msg\n\nDebug info: $e';
             showTroubleshooting = true;
           });
         }
